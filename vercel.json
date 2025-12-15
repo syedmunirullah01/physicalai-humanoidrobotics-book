@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd physicalai-humanoidrobotics-book && npm install && npm run build",
+  "outputDirectory": "physicalai-humanoidrobotics-book/build",
+  "installCommand": "cd physicalai-humanoidrobotics-book && npm install",
+  "framework": "docusaurus",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
+}
