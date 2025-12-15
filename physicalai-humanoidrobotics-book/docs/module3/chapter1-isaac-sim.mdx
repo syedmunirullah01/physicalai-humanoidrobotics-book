@@ -1,0 +1,300 @@
+---
+sidebar_position: 2
+slug: /module3/chapter1-isaac-sim
+title: Chapter 1 - Isaac Sim for Humanoid Robotics
+description: Complete guide to setting up and using Isaac Sim for humanoid robot simulation and digital twin creation
+---
+
+# Chapter 1: Isaac Sim for Humanoid Robotics
+
+This chapter covers the setup and configuration of Isaac Sim for humanoid robotics applications, including digital twin creation, physics simulation, and sensor simulation.
+
+## Introduction to Isaac Sim
+
+Isaac Sim is NVIDIA's robotics simulation environment built on the Omniverse platform. It provides high-fidelity physics simulation, realistic rendering, and comprehensive sensor simulation for robotics development.
+
+### Key Features
+- **Physics Simulation**: Accurate PhysX physics engine
+- **Rendering**: RTX-accelerated rendering for realistic visuals
+- **Sensor Simulation**: Comprehensive sensor simulation including cameras, LiDAR, IMU
+- **Robot Simulation**: Support for complex robot models and kinematics
+- **Environment Creation**: Tools for creating realistic environments
+
+## Setting Up Isaac Sim
+
+### Installation Requirements
+- NVIDIA GPU with RTX capabilities (RTX 30xx or 40xx series recommended)
+- Omniverse Launcher installed
+- Isaac Sim extension enabled
+- CUDA-compatible GPU drivers
+
+### Initial Configuration
+1. Launch Omniverse and open Isaac Sim
+2. Configure the workspace for robotics development
+3. Set up the development environment
+4. Verify sensor simulation capabilities
+
+## Digital Twin Creation
+
+### Importing Robot Models
+```python
+# Example: Importing a humanoid robot model
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.stage import add_reference_to_stage
+
+# Create a world instance
+world = World(stage_units_in_meters=1.0)
+
+# Add humanoid robot to the stage
+asset_path = "/path/to/humanoid_robot.usd"
+add_reference_to_stage(usd_path=asset_path, prim_path="/World/HumanoidRobot")
+```
+
+### Physics Configuration
+- **Mass Properties**: Configure mass, center of mass, and inertia
+- **Joints**: Set up revolute, prismatic, and fixed joints
+- **Collision**: Configure collision shapes and materials
+- **Dynamics**: Set friction, damping, and stiffness parameters
+
+### Sensor Integration
+- **Stereo Cameras**: Configure for VSLAM applications
+- **IMU**: Set up inertial measurement units
+- **LiDAR**: Configure for navigation applications
+- **Force/Torque Sensors**: For contact detection
+
+## Physics Simulation for Humanoid Robots
+
+### Bipedal Locomotion Simulation
+Humanoid robots require special attention to bipedal locomotion:
+
+```python
+# Example: Bipedal locomotion setup
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.utils.types import ArticulationAction
+
+class HumanoidRobot(Robot):
+    def __init__(
+        self,
+        prim_path: str,
+        name: str = "humanoid_robot",
+        usd_path: str = None,
+        position: np.ndarray = np.array([0, 0, 0]),
+        orientation: np.ndarray = np.array([0, 0, 0, 1]),
+    ):
+        super().__init__(
+            prim_path=prim_path,
+            name=name,
+            usd_path=usd_path,
+            position=position,
+            orientation=orientation,
+        )
+
+    def setup_bipedal_controller(self):
+        # Configure bipedal locomotion controller
+        self._bipedal_controller = BipedalController()
+        return
+```
+
+### Balance and Stability
+- **Center of Mass**: Maintain balance during locomotion
+- **Zero Moment Point (ZMP)**: Ensure stable walking
+- **Foot Contact**: Accurate contact simulation
+- **Terrain Adaptation**: Handle uneven surfaces
+
+## Sensor Simulation
+
+### Stereo Vision Setup
+For VSLAM applications, stereo vision is critical:
+
+```python
+# Example: Stereo camera configuration
+from omni.isaac.sensor import Camera
+
+def setup_stereo_cameras(robot_prim_path):
+    # Left camera
+    left_camera = Camera(
+        prim_path=f"{robot_prim_path}/left_camera",
+        frequency=30,
+        resolution=(640, 480),
+        position=np.array([0.1, 0.05, 0.1]),
+        orientation=usdrt.Quatf(0, 0, 0, 1)
+    )
+
+    # Right camera
+    right_camera = Camera(
+        prim_path=f"{robot_prim_path}/right_camera",
+        frequency=30,
+        resolution=(640, 480),
+        position=np.array([0.1, -0.05, 0.1]),
+        orientation=usdrt.Quatf(0, 0, 0, 1)
+    )
+
+    return left_camera, right_camera
+```
+
+### Sensor Calibration in Simulation
+- **Intrinsic Calibration**: Focal length, principal point, distortion
+- **Extrinsic Calibration**: Position and orientation relative to robot
+- **Temporal Synchronization**: Ensure proper timing between sensors
+
+## Environment Creation
+
+### Physics Environments
+Create realistic environments for testing:
+
+```python
+# Example: Creating a test environment
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.core.utils.stage import get_current_stage
+from pxr import Gf, UsdGeom
+
+def create_test_environment():
+    # Create ground plane
+    create_prim(
+        prim_path="/World/ground_plane",
+        prim_type="Plane",
+        position=Gf.Vec3d(0, 0, 0),
+        scale=Gf.Vec3d(10, 10, 1)
+    )
+
+    # Add obstacles
+    create_prim(
+        prim_path="/World/obstacle1",
+        prim_type="Cube",
+        position=Gf.Vec3d(2, 0, 0.5),
+        scale=Gf.Vec3d(0.5, 0.5, 1.0),
+        color=Gf.Vec3f(0.8, 0.2, 0.2)
+    )
+
+    return
+```
+
+### Dynamic Elements
+- **Moving Obstacles**: Test navigation in dynamic environments
+- **Interactive Objects**: Manipulation and interaction testing
+- **Variable Terrain**: Different surfaces and heights
+
+## Simulation Workflows
+
+### Development Workflow
+1. **Design Phase**: Create robot model and environment
+2. **Simulation Phase**: Test algorithms in simulation
+3. **Validation Phase**: Verify performance metrics
+4. **Transfer Phase**: Deploy to physical hardware
+
+### Best Practices
+- **Modular Design**: Create reusable components
+- **Parameterization**: Make simulations configurable
+- **Validation**: Compare simulation vs. real-world data
+- **Performance**: Optimize simulation for real-time operation
+
+## Performance Optimization
+
+### Rendering Optimization
+- **LOD (Level of Detail)**: Adjust detail based on distance
+- **Occlusion Culling**: Hide non-visible objects
+- **Texture Streaming**: Load textures on demand
+
+### Physics Optimization
+- **Simulation Steps**: Balance accuracy and performance
+- **Collision Optimization**: Use simplified collision shapes
+- **Joint Limits**: Constrain movements for stability
+
+## Debugging and Visualization
+
+### Debugging Tools
+- **Physics Visualization**: Show collision shapes and joints
+- **Sensor Visualization**: Display sensor data in real-time
+- **Trajectory Visualization**: Track robot movement
+- **Performance Monitoring**: Monitor simulation performance
+
+### Visualization Examples
+```python
+# Example: Visualization setup
+from omni.isaac.debug_draw import DebugDraw
+import carb
+
+def visualize_robot_state(robot):
+    debug_draw = DebugDraw()
+
+    # Draw center of mass
+    com_position = robot.get_world_pos()
+    debug_draw.draw_point(com_position, carb.Float4(1, 0, 0, 1))
+
+    # Draw ZMP (Zero Moment Point)
+    zmp_position = calculate_zmp(robot)
+    debug_draw.draw_point(zmp_position, carb.Float4(0, 1, 0, 1))
+
+    return
+```
+
+## Integration with ROS 2
+
+### ROS 2 Bridge
+Connect Isaac Sim with ROS 2 for real-time control:
+
+```python
+# Example: ROS 2 integration
+import rclpy
+from sensor_msgs.msg import Image, CameraInfo
+from geometry_msgs.msg import Twist
+
+class IsaacSimROSBridge:
+    def __init__(self):
+        self.node = rclpy.create_node('isaac_sim_bridge')
+        self.camera_publisher = self.node.create_publisher(Image, '/camera/image_raw', 10)
+        self.cmd_vel_subscriber = self.node.create_subscription(
+            Twist, '/cmd_vel', self.cmd_vel_callback, 10
+        )
+
+    def camera_callback(self, camera_data):
+        # Publish camera data to ROS 2
+        image_msg = convert_camera_to_ros(camera_data)
+        self.camera_publisher.publish(image_msg)
+
+    def cmd_vel_callback(self, msg):
+        # Send velocity commands to simulated robot
+        self.sim_robot.apply_velocity_command(msg.linear.x, msg.angular.z)
+```
+
+## Exercises
+
+### Exercise 1: Basic Setup
+1. Install Isaac Sim and verify installation
+2. Import a simple humanoid robot model
+3. Configure basic sensors (stereo cameras, IMU)
+4. Run a basic simulation
+
+### Exercise 2: Environment Creation
+1. Create a test environment with obstacles
+2. Configure physics properties for realistic simulation
+3. Test robot navigation in the environment
+4. Validate sensor data accuracy
+
+### Exercise 3: Performance Optimization
+1. Profile simulation performance
+2. Optimize rendering settings
+3. Adjust physics parameters for real-time operation
+4. Validate that optimization doesn't affect accuracy
+
+## Troubleshooting
+
+### Common Issues
+- **Performance Problems**: Reduce scene complexity or adjust settings
+- **Physics Instability**: Check joint limits and damping parameters
+- **Sensor Data Issues**: Verify calibration and timing
+- **Integration Problems**: Check ROS 2 bridge configuration
+
+### Debugging Strategies
+1. **Isolate Components**: Test each component individually
+2. **Compare Data**: Compare simulation vs. real-world data
+3. **Visualize**: Use debugging tools to visualize internal states
+4. **Log**: Enable detailed logging for issue tracking
+
+## Summary
+
+Isaac Sim provides a comprehensive platform for humanoid robotics simulation. By following the setup and configuration procedures in this chapter, you'll have a solid foundation for developing and testing humanoid robotics applications before deploying to physical hardware.
+
+In the next chapter, we'll explore Isaac ROS Visual SLAM for perception and localization capabilities that build upon the simulation foundation established here.

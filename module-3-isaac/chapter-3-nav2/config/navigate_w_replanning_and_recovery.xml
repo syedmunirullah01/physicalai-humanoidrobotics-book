@@ -1,0 +1,38 @@
+<!--
+  This behavior tree is used for navigation with replanning and recovery.
+  It will continuously replan the global path and execute local planning
+  while monitoring for recovery conditions.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <RecoveryNode number_of_retries="6" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithReplanning">
+        <RateController hz="0.1">
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+        </RateController>
+        <RecoveryNode number_of_retries="1" name="FollowPathRecovery">
+          <FollowPath path="{path}" controller_id="FollowPath"/>
+          <ReactiveFallback name="FollowPathFallback">
+            <GoalReached goal="{goal}" path="{path}"/>
+            <OdometryMonitor timeout="1.0"/>
+            <Inverter>
+              <TransformAvailable frame="{robot_base_frame}" transform="{robot_odom_frame}"/>
+            </Inverter>
+          </ReactiveFallback>
+        </RecoveryNode>
+      </PipelineSequence>
+      <ReactiveFallback name="RecoveryFallback">
+        <GoalUpdated goal="{goal}"/>
+        <RoundRobin name="RecoveryActions">
+          <Sequence name="ClearingActions">
+            <ClearEntireCostmap name="ClearGlobalCostmap" service_name="global_costmap/clear_entirely_global_costmap"/>
+            <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+          </Sequence>
+          <BackUp distance="0.15" backup_vel="0.025"/>
+          <Spin spin_dist="1.57"/>
+          <Wait wait_duration="5"/>
+        </RoundRobin>
+      </ReactiveFallback>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

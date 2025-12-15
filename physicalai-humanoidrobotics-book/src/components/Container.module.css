@@ -1,0 +1,46 @@
+/**
+ * Container Styles
+ */
+
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-lg);
+  padding-right: var(--spacing-lg);
+  width: 100%;
+}
+
+.sm {
+  max-width: var(--container-sm);
+}
+
+.md {
+  max-width: var(--container-md);
+}
+
+.lg {
+  max-width: var(--container-lg);
+}
+
+.xl {
+  max-width: var(--container-xl);
+}
+
+.full {
+  max-width: 100%;
+}
+
+/* Responsive Padding */
+@media (min-width: 768px) {
+  .container {
+    padding-left: var(--spacing-xl);
+    padding-right: var(--spacing-xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding-left: 2.5rem;
+    padding-right: 2.5rem;
+  }
+}

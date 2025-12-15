@@ -1,0 +1,150 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>module3_isaac</name>
+  <version>1.0.0</version>
+  <description>Module 3: The AI-Robot Brain (NVIDIA Isaac™) - Educational content for advanced perception, Visual SLAM, and bipedal navigation using NVIDIA Isaac platform</description>
+
+  <maintainer email="support@physicalai-book.com">Physical AI Team</maintainer>
+  <license>Educational Use - Part of Physical AI & Humanoid Robotics Series</license>
+
+  <url type="website">https://github.com/YOUR_ORG/physicalai-humanoidrobotics-book</url>
+  <url type="repository">https://github.com/YOUR_ORG/physicalai-humanoidrobotics-book</url>
+  <url type="bugtracker">https://github.com/YOUR_ORG/physicalai-humanoidrobotics-book/issues</url>
+
+  <author email="support@physicalai-book.com">Physical AI Team</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <!-- ROS 2 Core Dependencies -->
+  <depend>rclpy</depend>
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+
+  <!-- NVIDIA Isaac ROS Dependencies -->
+  <depend>isaac_ros_visual_slam</depend>
+  <depend>isaac_ros_visual_slam_interfaces</depend>
+  <depend>isaac_ros_common</depend>
+  <depend>isaac_ros_nitros</depend>
+
+  <!-- Nav2 Dependencies -->
+  <depend>navigation2</depend>
+  <depend>nav2_msgs</depend>
+  <depend>nav2_bringup</depend>
+  <depend>nav2_common</depend>
+
+  <!-- Perception Dependencies -->
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>vision_msgs</depend>
+
+  <!-- Additional ROS 2 Utilities -->
+  <depend>robot_state_publisher</depend>
+  <depend>xacro</depend>
+
+  <!-- Testing Dependencies -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>launch_testing</test_depend>
+  <test_depend>launch_testing_ament_cmake</test_depend>
+  <test_depend>launch_testing_ros</test_depend>
+
+  <!-- Export Information -->
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+  <!-- Package Information -->
+  <metadata>
+    <keywords>
+      <keyword>robotics</keyword>
+      <keyword>education</keyword>
+      <keyword>isaac-sim</keyword>
+      <keyword>isaac-ros</keyword>
+      <keyword>vslam</keyword>
+      <keyword>navigation</keyword>
+      <keyword>nav2</keyword>
+      <keyword>bipedal</keyword>
+      <keyword>humanoid</keyword>
+      <keyword>perception</keyword>
+      <keyword>simulation</keyword>
+      <keyword>physical-ai</keyword>
+    </keywords>
+
+    <chapter_structure>
+      <chapter number="1">
+        <name>Isaac Sim - Photorealistic Simulation</name>
+        <topics>
+          <topic>Environment creation</topic>
+          <topic>Sensor configuration</topic>
+          <topic>Synthetic data generation</topic>
+          <topic>Domain randomization</topic>
+          <topic>Sim-to-real transfer</topic>
+        </topics>
+      </chapter>
+
+      <chapter number="2">
+        <name>Isaac ROS - Hardware-Accelerated VSLAM</name>
+        <topics>
+          <topic>Visual odometry</topic>
+          <topic>Stereo VSLAM</topic>
+          <topic>Loop closure detection</topic>
+          <topic>Map management</topic>
+          <topic>Performance tuning</topic>
+          <topic>VSLAM debugging</topic>
+        </topics>
+      </chapter>
+
+      <chapter number="3">
+        <name>Nav2 - Bipedal Path Planning</name>
+        <topics>
+          <topic>Global planning</topic>
+          <topic>Local planning</topic>
+          <topic>Footstep planning</topic>
+          <topic>Obstacle avoidance</topic>
+          <topic>Recovery behaviors</topic>
+          <topic>VSLAM-Nav2 integration</topic>
+        </topics>
+      </chapter>
+    </chapter_structure>
+
+    <prerequisites>
+      <module>Module 1: ROS 2 Fundamentals</module>
+      <module>Module 2: Digital Twin Engineering</module>
+      <hardware>NVIDIA GPU (RTX 2060+ recommended, 6GB+ VRAM)</hardware>
+      <software>Ubuntu 22.04 LTS or Windows 11</software>
+      <software>ROS 2 Humble (primary) or Jazzy (with notes)</software>
+      <software>NVIDIA Isaac Sim 2023.1.1+</software>
+      <software>Python 3.10+</software>
+    </prerequisites>
+
+    <learning_outcomes>
+      <outcome id="LO-001">Articulate the value of simulation for robotics development and explain synthetic data generation workflows</outcome>
+      <outcome id="LO-002">Understand Visual SLAM principles including feature extraction, data association, optimization, and loop closure</outcome>
+      <outcome id="LO-003">Configure and tune navigation stacks for bipedal robots with stability-aware planning</outcome>
+      <outcome id="LO-004">Recognize performance bottlenecks in perception pipelines and apply GPU acceleration appropriately</outcome>
+      <outcome id="LO-005">Debug common VSLAM failures (tracking loss, mapping errors, relocalization issues)</outcome>
+      <outcome id="LO-006">Understand the integration of perception, localization, and planning for autonomous navigation</outcome>
+    </learning_outcomes>
+
+    <success_criteria>
+      <criterion id="SC-001">Generate 1000+ labeled images within 1 hour</criterion>
+      <criterion id="SC-002">Achieve VSLAM >30 Hz real-time performance</criterion>
+      <criterion id="SC-003">Maintain &lt;2% VSLAM drift over 100m paths</criterion>
+      <criterion id="SC-004">Generate footstep plans within 5 seconds</criterion>
+      <criterion id="SC-005">90% learner completion rate</criterion>
+      <criterion id="SC-006">Understand sim-to-real gap mitigation (3+ techniques)</criterion>
+      <criterion id="SC-007">Synthetic data achieves &gt;85% perception accuracy</criterion>
+      <criterion id="SC-008">Navigation success rate &gt;95%</criterion>
+      <criterion id="SC-009">Recovery success rate &gt;70%</criterion>
+    </success_criteria>
+  </metadata>
+</package>

@@ -1,0 +1,75 @@
+/**
+ * Section Styles
+ */
+
+.section {
+  width: 100%;
+  padding-top: var(--spacing-4xl);
+  padding-bottom: var(--spacing-4xl);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ==================== VARIANTS ==================== */
+
+.default {
+  background: var(--color-bg-primary);
+}
+
+.dark {
+  background: linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg-primary) 100%);
+}
+
+.elevated {
+  background: rgba(15, 23, 42, 0.6);
+  border-top: 1px solid rgba(0, 217, 255, 0.1);
+  border-bottom: 1px solid rgba(0, 217, 255, 0.1);
+}
+
+/* ==================== WITH BORDER ==================== */
+
+.withBorder {
+  border-top: 1px solid rgba(0, 217, 255, 0.2);
+  position: relative;
+}
+
+.withBorder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 217, 255, 0.5),
+    transparent
+  );
+  opacity: 0.6;
+}
+
+/* ==================== RESPONSIVE PADDING ==================== */
+
+@media (max-width: 768px) {
+  .section {
+    padding-top: var(--spacing-3xl);
+    padding-bottom: var(--spacing-3xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding-top: var(--spacing-2xl);
+    padding-bottom: var(--spacing-2xl);
+  }
+}
+
+/* ==================== WIDE SCREENS ==================== */
+
+@media (min-width: 1536px) {
+  .section {
+    padding-top: 7rem;
+    padding-bottom: 7rem;
+  }
+}

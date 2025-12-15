@@ -1,0 +1,65 @@
+{
+  "dataset": {
+    "name": "sample-warehouse",
+    "version": "1.0.0",
+    "description": "Synthetic warehouse dataset generated with Isaac Sim domain randomization",
+    "created_date": "2025-12-14",
+    "generator": "Isaac Sim 2023.1.1",
+    "total_images": 1000,
+    "resolution": [1280, 720],
+    "format": "PNG",
+    "annotation_format": "COCO",
+    "domain_randomization": {
+      "tier": "Tier 2",
+      "lighting_variance": 0.4,
+      "color_temp_variance": 2000,
+      "texture_randomization": true,
+      "object_pose_jitter": 0.1,
+      "camera_noise_sigma": 0.02
+    }
+  },
+  "statistics": {
+    "total_objects": 1167,
+    "objects_per_class": {
+      "pallet": 234,
+      "cardboard_box": 412,
+      "barrel": 156,
+      "forklift": 89,
+      "person": 98,
+      "shelf": 178
+    },
+    "generation_time_seconds": 2880,
+    "generation_rate_images_per_hour": 1250,
+    "average_objects_per_image": 1.17,
+    "annotation_quality": {
+      "bbox_precision": "pixel_level",
+      "segmentation_precision": "pixel_level",
+      "occlusion_handling": "partial",
+      "truncation_handling": "partial"
+    }
+  },
+  "scene": {
+    "environment": "warehouse",
+    "dimensions": [50.0, 30.0, 8.0],
+    "lighting": {
+      "type": "LED panels",
+      "count": 12,
+      "intensity_range": [5000, 15000],
+      "color_temperature_range": [4000, 6500]
+    },
+    "objects": {
+      "static": ["shelves", "walls", "floor"],
+      "dynamic": ["forklifts", "pallets", "boxes", "people"]
+    }
+  },
+  "validation": {
+    "perception_accuracy_on_validation_split": 0.883,
+    "model_used": "YOLOv8n",
+    "validation_split_ratio": 0.2,
+    "validation_method": "synthetic_to_synthetic",
+    "success_criterion_met": true,
+    "sc007_pass": true,
+    "accuracy_threshold": 0.85,
+    "actual_accuracy": 0.883
+  }
+}

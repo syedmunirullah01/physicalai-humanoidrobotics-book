@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python scripts/validate-readability.py:*)",
+      "Bash(python:*)",
+      "Bash(npm run build:*)",
+      "Bash(git fetch:*)",
+      "Bash(ls:*)",
+      "Bash(powershell:*)",
+      "SlashCommand(/sp.tasks)",
+      "Bash(bash:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git config:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm start)",
+      "Bash(npm start:*)",
+      "Bash(npm install:*)",
+      "Bash(pkill:*)",
+      "Bash(cat:*)",
+      "Bash(wc:*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File .specify/scripts/powershell/create-new-feature.ps1 -Json -Number 4 -ShortName \"module3-isaac\" -Description \"Module 3: The AI-Robot Brain (NVIDIA Isaac) with advanced perception, Isaac Sim simulation, Isaac ROS VSLAM, and Nav2 path planning for bipedal movement - 3 chapters\")",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File .specify/scripts/powershell/setup-plan.ps1 -Json)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File .specify/scripts/powershell/check-prerequisites.ps1 -Json)",
+      "Bash(.specify/scripts/bash/create-phr.sh:*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks)",
+      "Bash(node --version)",
+      "Bash(npm --version)",
+      "Bash(dir)",
+      "Bash(npx docusaurus start)",
+      "Bash(grep -n \"<[0-9]\" docs/module3/*.mdx)",
+      "Bash(grep -n \"<[0-9]\" docs/module3/chapter*.mdx)"
+    ]
+  }
+}

@@ -1,0 +1,280 @@
+<?xml version="1.0" ?>
+<!--
+  Obstacle course world for testing robot navigation and collision detection
+
+  Learning objectives:
+  - Creating static obstacles with collision geometry
+  - Designing test environments for robot navigation
+  - Understanding SDF model composition
+-->
+<sdf version="1.8">
+  <world name="obstacle_course">
+
+    <!-- Physics Engine Configuration -->
+    <physics name="1ms" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000.0</real_time_update_rate>
+    </physics>
+
+    <!-- Gravity -->
+    <gravity>0 0 -9.81</gravity>
+
+    <!-- Scene -->
+    <scene>
+      <ambient>0.4 0.4 0.4 1</ambient>
+      <background>0.7 0.7 0.7 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <!-- Sun -->
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <!-- Ground Plane -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.6</mu>
+                <mu2>0.6</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Obstacle 1: Large Box (Wall) -->
+    <model name="box_wall">
+      <static>true</static>
+      <pose>3 0 0.5 0 0 0</pose>  <!-- x y z roll pitch yaw -->
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.2 4.0 1.0</size>  <!-- Thin wall: 20cm x 4m x 1m -->
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.2 4.0 1.0</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.7 0.3 0.3 1</ambient>
+            <diffuse>0.7 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Obstacle 2: Cylinder (Column) -->
+    <model name="cylinder_column">
+      <static>true</static>
+      <pose>-2 2 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>1.5</length>  <!-- 1.5m tall column -->
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.3</radius>
+              <length>1.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.3 0.5 0.7 1</ambient>
+            <diffuse>0.3 0.5 0.7 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Obstacle 3: Sphere (Ball) -->
+    <model name="sphere_obstacle">
+      <static>true</static>
+      <pose>-2 -2 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>  <!-- 50cm radius sphere -->
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>0.5</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.3 0.7 0.3 1</ambient>
+            <diffuse>0.3 0.7 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Obstacle 4: L-Shaped Wall (Composite) -->
+    <model name="l_wall_segment1">
+      <static>true</static>
+      <pose>0 -3 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>4.0 0.2 1.0</size>  <!-- Horizontal segment: 4m x 20cm x 1m -->
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>4.0 0.2 1.0</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.3 1</ambient>
+            <diffuse>0.6 0.6 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="l_wall_segment2">
+      <static>true</static>
+      <pose>2 -1 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.2 4.0 1.0</size>  <!-- Vertical segment: 20cm x 4m x 1m -->
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.2 4.0 1.0</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.6 0.3 1</ambient>
+            <diffuse>0.6 0.6 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Obstacle 5: Ramp (Inclined Plane) -->
+    <model name="ramp">
+      <static>true</static>
+      <pose>-4 0 0.25 0 0.2618 0</pose>  <!-- Rotated 15° around Y-axis (0.2618 rad) -->
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>2.0 1.0 0.1</size>  <!-- 2m x 1m x 10cm ramp -->
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>0.8</mu>  <!-- Higher friction to prevent sliding -->
+                <mu2>0.8</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>2.0 1.0 0.1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.3 0.6 1</ambient>
+            <diffuse>0.5 0.3 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Start Zone Marker (Green Box, no collision) -->
+    <model name="start_zone">
+      <static>true</static>
+      <pose>0 0 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1.0 1.0 0.02</size>  <!-- Flat marker on ground -->
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.9 0.2 0.5</ambient>
+            <diffuse>0.2 0.9 0.2 0.5</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Goal Zone Marker (Blue Box, no collision) -->
+    <model name="goal_zone">
+      <static>true</static>
+      <pose>5 3 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1.0 1.0 0.02</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.9 0.5</ambient>
+            <diffuse>0.2 0.2 0.9 0.5</diffuse>
+            <transparency>0.5</transparency>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

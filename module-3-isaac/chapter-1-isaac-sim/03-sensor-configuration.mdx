@@ -1,0 +1,419 @@
+---
+sidebar_position: 3
+title: Sensor Configuration
+description: Configuring virtual sensors (RGB, depth, stereo, LiDAR) for synthetic data generation
+---
+
+# Chapter 1: Sensor Configuration
+
+## Overview
+
+This section covers configuring virtual sensors in Isaac Sim for synthetic data generation. You'll learn to set up RGB cameras, depth sensors, stereo cameras, and LiDAR systems that generate realistic sensor data with ground truth annotations.
+
+## Learning Objectives
+
+By the end of this section, you will be able to:
+- Configure RGB cameras with realistic parameters
+- Set up depth and stereo cameras for 3D perception
+- Configure LiDAR sensors for 3D mapping
+- Understand sensor calibration and coordinate systems
+- Validate sensor data quality and synchronization
+
+## Sensor Types in Isaac Sim
+
+Isaac Sim supports multiple sensor types for robotics applications:
+
+### 1. RGB Cameras
+- **Purpose**: Color image capture for visual perception
+- **Output**: 8-bit RGB images (PNG format)
+- **Applications**: Object detection, classification, visual SLAM
+
+### 2. Depth Cameras
+- **Purpose**: Distance measurement for 3D reconstruction
+- **Output**: 16-bit depth maps (PNG format, millimeters)
+- **Applications**: 3D reconstruction, obstacle detection, depth estimation
+
+### 3. Stereo Cameras
+- **Purpose**: 3D reconstruction through stereo vision
+- **Output**: Left/right RGB pairs for disparity computation
+- **Applications**: Visual SLAM, 3D reconstruction, depth estimation
+
+### 4. LiDAR Sensors
+- **Purpose**: 3D point cloud generation for mapping
+- **Output**: Point cloud data (sensor_msgs/PointCloud2)
+- **Applications**: 3D mapping, obstacle detection, localization
+
+## Coordinate Systems and TF Frames
+
+Understanding coordinate systems is crucial for sensor integration:
+
+```
+Isaac Sim (USD) Coordinate System:
+- X: Forward (Red)
+- Y: Left (Green)
+- Z: Up (Blue)
+
+ROS 2 Coordinate System:
+- X: Forward (Red)
+- Y: Left (Green)
+- Z: Up (Blue)
+
+Camera Coordinate System:
+- X: Right in image (Red)
+- Y: Down in image (Green)
+- Z: Forward along optical axis (Blue)
+```
+
+## RGB Camera Configuration
+
+### Adding an RGB Camera
+
+1. **Create the camera**:
+   - Right-click in Stage Panel → `Create > Camera`
+   - Name it "Camera_0" or "RGB_Camera"
+
+2. **Configure camera properties** in Property Panel:
+   - `horizontalAperture`: 20.955 (mm, for 1280x720 at 90° FOV)
+   - `verticalAperture`: 11.803 (mm)
+   - `focalLength`: 15.0 (mm)
+   - `clippingRange`: (0.1, 1000.0) meters
+
+### Advanced RGB Camera Settings
+
+```python
+# Python API example for RGB camera configuration
+from omni.isaac.sensor import Camera
+
+# Create and configure RGB camera
+camera = Camera(
+    prim_path="/World/Camera_0",
+    frequency=30,  # Hz
+    resolution=(1280, 720),
+    position=(2.0, 0.0, 1.5),
+    orientation=(0.0, 0.0, 0.0, 1.0)  # Quaternion (w, x, y, z)
+)
+
+# Configure camera intrinsics
+camera.config_camera(
+    horizontal_aperture=20.955,
+    vertical_aperture=11.803,
+    focal_length=15.0,
+    clipping_range=(0.1, 1000.0)
+)
+```
+
+### Camera Mounting and Positioning
+
+For realistic sensor placement:
+
+1. **Mount on robot**: Position camera at typical robot height (1-2m)
+2. **Forward facing**: Ensure camera looks in robot's forward direction
+3. **Clear view**: Verify no robot parts obstruct camera view
+4. **Multiple cameras**: Position for desired field of view
+
+## Depth Camera Configuration
+
+### Adding a Depth Camera
+
+1. **Create depth camera**:
+   - Use same camera as RGB or create separate depth sensor
+   - Ensure same intrinsic parameters as RGB for alignment
+
+2. **Enable depth output** in Isaac Sim:
+   - Add `Isaac Create Realsense Depth Images` extension
+   - Or use `Isaac Simulation Cameras` extension
+
+### Depth Camera Properties
+
+```yaml
+# Example depth camera configuration
+sensor:
+  type: "depth"
+  resolution: [1280, 720]
+  fov: 90.0  # degrees
+  min_range: 0.1  # meters
+  max_range: 100.0  # meters
+  format: "16bit"  # millimeters
+  noise_model: "gaussian"
+  noise_sigma: 0.01  # meters
+```
+
+### Depth Accuracy Considerations
+
+- **Near range**: More accurate at closer distances
+- **Far range**: Accuracy degrades with distance
+- **Surface normals**: Depth accuracy varies with surface angle
+- **Resolution**: Higher resolution = more accurate depth
+
+## Stereo Camera Configuration
+
+### Creating Stereo Camera Pair
+
+Stereo vision requires precise camera positioning:
+
+1. **Create left camera**:
+   - Position at (x, y, z)
+
+2. **Create right camera**:
+   - Position at (x, y-baseline, z)
+   - Where baseline is typically 120mm
+
+3. **Ensure identical intrinsics**:
+   - Same focal length, aperture, resolution
+   - Perfect alignment for stereo matching
+
+### Stereo Camera Calibration
+
+```yaml
+# Stereo camera calibration (ROS format)
+left_camera:
+  camera_matrix:
+    rows: 3
+    cols: 3
+    data: [426.67, 0.0, 424.0, 0.0, 426.67, 240.0, 0.0, 0.0, 1.0]
+  distortion_coefficients:
+    rows: 1
+    cols: 5
+    data: [0.0, 0.0, 0.0, 0.0, 0.0]
+  rectification_matrix:
+    rows: 3
+    cols: 3
+    data: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
+  projection_matrix:
+    rows: 3
+    cols: 4
+    data: [426.67, 0.0, 424.0, 0.0, 0.0, 426.67, 240.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+
+right_camera:
+  camera_matrix:
+    rows: 3
+    cols: 3
+    data: [426.67, 0.0, 424.0, 0.0, 426.67, 240.0, 0.0, 0.0, 1.0]
+  baseline: 0.120  # 120mm
+```
+
+### Stereo Configuration Best Practices
+
+- **Baseline selection**: 60-200mm typical, balance depth range vs accuracy
+- **Rectification**: Ensure cameras are perfectly aligned
+- **Synchronization**: Both cameras must capture simultaneously
+- **Calibration**: Verify intrinsic/extrinsic parameters
+
+## LiDAR Configuration
+
+### Adding LiDAR Sensor
+
+1. **Create LiDAR**:
+   - Right-click in Stage → `Create > Isaac > Sensors > Lidar`
+   - Name appropriately (e.g., "Lidar_0")
+
+2. **Configure LiDAR properties**:
+   - **Vertical channels**: 16, 32, 64, or 128
+   - **Range**: 10-200m depending on application
+   - **FOV**: Vertical FOV (typically 20-30°)
+   - **Resolution**: Angular resolution (0.1-0.5°)
+
+### LiDAR Parameters
+
+```yaml
+# Example LiDAR configuration
+lidar:
+  type: "velodyne_vlp16"  # or similar
+  channels: 16
+  range: 100.0  # meters
+  vertical_fov: 30.0  # degrees
+  horizontal_fov: 360.0  # degrees
+  rotation_frequency: 10.0  # Hz
+  points_per_second: 300000
+  noise_model: "gaussian"
+  noise_sigma: 0.01  # meters
+```
+
+### LiDAR Applications
+
+- **3D mapping**: Create point cloud maps of environment
+- **Obstacle detection**: Identify obstacles in robot path
+- **Localization**: Use map matching for position estimation
+- **Environment understanding**: Segment and classify objects
+
+## Sensor Integration with ROS 2
+
+### Enabling ROS 2 Bridge
+
+1. **Enable ROS 2 extension**:
+   - Window > Extensions
+   - Search "ROS2 Bridge"
+   - Enable `omni.isaac.ros2_bridge`
+
+2. **Configure ROS 2 settings**:
+   - Set ROS domain ID
+   - Configure topic namespaces
+   - Verify ROS 2 network connectivity
+
+### ROS 2 Topic Configuration
+
+```yaml
+# ROS 2 sensor configuration
+ros2:
+  camera:
+    rgb_topic: "/camera/rgb/image_raw"
+    depth_topic: "/camera/depth/image_raw"
+    camera_info_topic: "/camera/rgb/camera_info"
+    frame_id: "camera_rgb_optical_frame"
+  lidar:
+    pointcloud_topic: "/lidar/points"
+    frame_id: "lidar_link"
+  stereo:
+    left_topic: "/camera/left/image_raw"
+    right_topic: "/camera/right/image_raw"
+    left_info_topic: "/camera/left/camera_info"
+    right_info_topic: "/camera/right/camera_info"
+```
+
+## Practical Exercise: Configure Stereo Camera System
+
+Let's configure a complete stereo camera system:
+
+### Step 1: Create Stereo Pair
+
+1. **Create left camera**:
+   - Name: `Camera_Left`
+   - Position: (0.0, 0.060, 0.0)  # 60mm right of center
+   - Resolution: 848x480
+   - FOV: 90°
+   - Focal length: 426.67 (for 848px width)
+
+2. **Create right camera**:
+   - Name: `Camera_Right`
+   - Position: (0.0, -0.060, 0.0)  # 60mm left of center (120mm baseline)
+   - Same resolution and intrinsics as left
+
+### Step 2: Configure Camera Properties
+
+```python
+# Python script for stereo camera setup
+import omni
+from omni.isaac.core.utils.prims import get_prim_at_path
+from omni.isaac.sensor import Camera
+
+# Create left camera
+left_camera = Camera(
+    prim_path="/World/Camera_Left",
+    frequency=30,
+    resolution=(848, 480),
+    position=(0.0, 0.060, 0.0),
+    orientation=(0.0, 0.0, 0.0, 1.0)
+)
+
+# Create right camera (identical properties, different position)
+right_camera = Camera(
+    prim_path="/World/Camera_Right",
+    frequency=30,
+    resolution=(848, 480),
+    position=(0.0, -0.060, 0.0),
+    orientation=(0.0, 0.0, 0.0, 1.0)
+)
+
+# Configure both cameras with same intrinsics
+for cam in [left_camera, right_camera]:
+    cam.config_camera(
+        horizontal_aperture=15.0,  # Adjust for 90° FOV at 848px
+        vertical_aperture=8.47,    # Adjust for aspect ratio
+        focal_length=11.25,
+        clipping_range=(0.1, 100.0)
+    )
+```
+
+### Step 3: Verify Synchronization
+
+1. **Check timing**: Both cameras should capture simultaneously
+2. **Validate stereo rectification**: Images should be horizontally aligned
+3. **Test disparity**: Verify stereo matching works with test scene
+
+## Sensor Data Quality Validation
+
+### Image Quality Checks
+
+1. **Resolution verification**: Confirm images match configured resolution
+2. **Exposure**: Check for proper lighting (not over/underexposed)
+3. **Distortion**: Verify minimal lens distortion
+4. **Noise**: Ensure appropriate noise levels for realism
+
+### Depth Quality Checks
+
+1. **Range verification**: Check depth values within expected range
+2. **Accuracy**: Verify depth accuracy at different distances
+3. **Missing data**: Check for appropriate invalid depth values (0)
+4. **Alignment**: Ensure depth aligned with RGB image
+
+### LiDAR Quality Checks
+
+1. **Point density**: Verify adequate point density for application
+2. **Range accuracy**: Check distance measurements
+3. **Angular resolution**: Confirm appropriate resolution
+4. **Noise**: Validate noise levels match configuration
+
+## Troubleshooting Sensor Issues
+
+### Common RGB Camera Issues
+
+- **Black images**: Check lighting and exposure settings
+- **Blurry images**: Verify camera focus and motion blur settings
+- **Wrong colors**: Check color space and gamma settings
+- **Low FPS**: Reduce resolution or rendering quality
+
+### Common Depth Camera Issues
+
+- **Invalid depth values**: Check clipping range and surface properties
+- **Inconsistent depth**: Verify material properties and lighting
+- **Noise artifacts**: Adjust noise parameters
+- **Alignment issues**: Ensure RGB and depth cameras are properly aligned
+
+### Common LiDAR Issues
+
+- **Sparse point clouds**: Check range and resolution settings
+- **Range errors**: Verify material reflectance properties
+- **Ghost points**: Check for proper occlusion handling
+- **Synchronization**: Ensure LiDAR frequency matches expectations
+
+## Performance Considerations
+
+### Rendering Performance
+
+- **Multi-camera systems**: Each camera renders independently (performance impact)
+- **High resolution**: Higher resolution = more GPU load
+- **Real-time requirements**: Balance quality vs performance for data generation
+
+### Data Storage
+
+- **RGB images**: 848x480 RGB = ~1.2MB per image (PNG)
+- **Depth images**: 848x480 depth = ~1.7MB per image (16-bit PNG)
+- **LiDAR point clouds**: ~100KB-1MB per scan depending on density
+
+## Success Criteria Validation
+
+This section addresses **FR-002**: System MUST support configuring virtual sensors (RGB cameras, depth cameras, stereo cameras, LiDAR) with realistic physics simulation.
+
+### Validation Checklist
+
+- [ ] RGB camera configured with proper intrinsics
+- [ ] Depth camera generates realistic depth maps
+- [ ] Stereo camera pair configured with correct baseline
+- [ ] LiDAR sensor configured for 3D mapping
+- [ ] All sensors produce synchronized data
+- [ ] Sensor data quality meets perception requirements
+- [ ] ROS 2 integration configured (if applicable)
+
+## Next Steps
+
+Continue to Section 4: [Data Generation](./04-data-generation.mdx) to learn how to generate synthetic datasets with ground truth annotations.
+
+## Resources
+
+- [Isaac Sim Camera Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/tutorial_basic_camera.html)
+- [ROS 2 Sensor Integration Guide](https://nvidia-isaac-ros.github.io/concepts/camera_models/index.html)
+- [Stereo Vision in Robotics](https://docs.opencv.org/4.x/d9/d0c/group__calib3d.html)
+
+---
+
+*Continue to [Section 4: Data Generation](./04-data-generation.mdx) to learn how to generate synthetic datasets with ground truth annotations.*

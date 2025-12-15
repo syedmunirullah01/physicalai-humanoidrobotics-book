@@ -1,0 +1,208 @@
+/**
+ * SecondaryButton Styles
+ *
+ * Design Principles:
+ * - Performance-optimized (GPU-accelerated transforms)
+ * - Accessibility-first (visible focus, sufficient color contrast)
+ * - Responsive (mobile-first, scales appropriately)
+ * - Maintainable (clear structure, comprehensive comments)
+ */
+
+/* ==================== BASE STYLES ==================== */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  border-radius: var(--radius-md);
+  background: rgba(0, 217, 255, 0.1);
+  color: var(--color-primary);
+  transition: all var(--transition-base);
+  will-change: transform, box-shadow, border-color, background-color;
+  position: relative;
+  overflow: hidden;
+
+  /* Ensure consistent appearance across browsers */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==================== SIZE VARIANTS ==================== */
+
+.small {
+  padding: 8px 16px;
+  font-size: var(--font-size-sm);
+  min-height: 32px;
+}
+
+.medium {
+  padding: 12px 24px;
+  font-size: var(--font-size-base);
+  min-height: 40px;
+}
+
+.large {
+  padding: 16px 32px;
+  font-size: var(--font-size-lg);
+  min-height: 48px;
+}
+
+/* ==================== RESPONSIVE PADDING ==================== */
+
+@media (max-width: 768px) {
+  .small {
+    padding: 8px 14px;
+    font-size: var(--font-size-xs);
+  }
+
+  .medium {
+    padding: 10px 18px;
+    font-size: var(--font-size-sm);
+    min-height: 36px;
+  }
+
+  .large {
+    padding: 14px 24px;
+    font-size: var(--font-size-base);
+    min-height: 40px;
+  }
+}
+
+/* ==================== FULL WIDTH VARIANT ==================== */
+
+.fullWidth {
+  width: 100%;
+}
+
+/* ==================== CONTENT LAYOUT ==================== */
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.withIcon {
+  gap: var(--spacing-sm);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.small .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.medium .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.large .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ==================== HOVER STATE ==================== */
+
+.button:not(.disabled):hover {
+  background: rgba(0, 217, 255, 0.2);
+  border-color: rgba(0, 217, 255, 0.5);
+  color: var(--color-primary-light);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+/* ==================== FOCUS STATE ==================== */
+
+.button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+}
+
+/* ==================== ACTIVE STATE ==================== */
+
+.button:active:not(.disabled) {
+  transform: translateY(0);
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.2);
+}
+
+/* ==================== DISABLED STATE ==================== */
+
+.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: rgba(0, 217, 255, 0.05);
+  border-color: rgba(0, 217, 255, 0.2);
+  color: var(--color-text-tertiary);
+}
+
+.disabled:focus-visible {
+  outline: none;
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+
+/* Ensure button is keyboard accessible */
+.button {
+  position: relative;
+}
+
+/* Remove default button styling */
+.button {
+  margin: 0;
+  padding-block: 0;
+  padding-inline: 0;
+  line-height: 1;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  .button {
+    border-width: 2px;
+  }
+
+  .button:not(.disabled):hover {
+    border-color: var(--color-primary);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .button {
+    transition: none;
+    will-change: auto;
+  }
+
+  .button:not(.disabled):hover {
+    transform: none;
+  }
+}
+
+/* ==================== DARK MODE ADJUSTMENTS ==================== */
+
+[data-theme='dark'] .button {
+  background: rgba(0, 217, 255, 0.1);
+  border-color: rgba(0, 217, 255, 0.3);
+  color: var(--color-primary-light);
+}
+
+[data-theme='dark'] .button:not(.disabled):hover {
+  background: rgba(0, 217, 255, 0.15);
+  border-color: rgba(0, 217, 255, 0.6);
+  color: #67e8f9;
+}

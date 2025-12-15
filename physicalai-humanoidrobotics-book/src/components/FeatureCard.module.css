@@ -1,0 +1,120 @@
+/**
+ * FeatureCard Styles
+ *
+ * Compact icon-focused card for feature grids.
+ * Emphasizes visual clarity and technical credibility.
+ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-lg);
+  transition: all var(--transition-smooth);
+  will-change: transform;
+}
+
+/* ==================== ICON CONTAINER ==================== */
+
+.iconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: var(--spacing-sm);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: rgba(0, 217, 255, 0.1);
+  color: var(--color-primary);
+  transition: all var(--transition-base);
+  will-change: transform, box-shadow;
+}
+
+.card:hover .iconWrapper {
+  background: rgba(0, 217, 255, 0.15);
+  box-shadow: var(--shadow-glow-cyan);
+  transform: scale(1.1);
+}
+
+/* ==================== CONTENT ==================== */
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+/* ==================== TITLE ==================== */
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* ==================== DESCRIPTION ==================== */
+
+.description {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+}
+
+/* ==================== RESPONSIVE SIZING ==================== */
+
+@media (max-width: 768px) {
+  .card {
+    gap: var(--spacing-md);
+  }
+
+  .iconWrapper {
+    width: 40px;
+    height: 40px;
+  }
+
+  .title {
+    font-size: var(--font-size-base);
+  }
+
+  .description {
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+
+/* High contrast mode */
+@media (prefers-contrast: more) {
+  .iconWrapper {
+    border: 2px solid rgba(0, 217, 255, 0.4);
+  }
+
+  .title {
+    font-weight: var(--font-weight-extrabold);
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .iconWrapper {
+    transition: none;
+    will-change: auto;
+  }
+
+  .card:hover .iconWrapper {
+    transform: none;
+  }
+}

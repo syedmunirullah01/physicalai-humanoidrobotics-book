@@ -1,0 +1,705 @@
+---
+sidebar_position: 3
+title: "Chapter 2: High-Fidelity Rendering in Unity"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Chapter 2: High-Fidelity Rendering in Unity
+
+:::info Learning Outcomes (Bloom's Level: APPLY)
+By the end of this chapter, you will be able to:
+- **Install** and configure Unity 2022 LTS with ROS-TCP-Connector for robot visualization
+- **Import** URDF robot models into Unity with materials and physics properties
+- **Apply** performance optimization techniques (LOD, occlusion culling, batching) to achieve 60+ FPS
+- **Create** human-robot interaction (HRI) scenarios with virtual humans and environmental context
+- **Implement** bidirectional ROS 2 ↔ Unity communication for teleoperation and state visualization
+:::
+
+## Prerequisites
+
+**Required Knowledge**:
+- Chapter 1: Physics Simulation in Gazebo (URDF structure, ROS 2 topics)
+- Basic C# programming (variables, functions, classes)
+- Familiarity with 3D graphics concepts (meshes, materials, transforms)
+
+**Software Requirements**:
+<Tabs groupId="operating-systems">
+  <TabItem value="windows" label="Windows 10/11" default>
+    ```powershell
+    # Download Unity Hub
+    # https://unity.com/download
+
+    # Install Unity 2022 LTS via Unity Hub
+    # Modules: Windows Build Support, Linux Build Support (optional)
+
+    # Install ROS 2 Humble (WSL2 recommended)
+    wsl --install Ubuntu-22.04
+    # Inside WSL:
+    sudo apt install ros-humble-desktop ros-humble-ros-tcp-endpoint
+    ```
+  </TabItem>
+  <TabItem value="linux" label="Ubuntu 22.04/24.04">
+    ```bash
+    # Install Unity Hub (AppImage)
+    wget https://public-cdn.cloud.unity3d.com/hub/prod/UnityHub.AppImage
+    chmod +x UnityHub.AppImage
+    ./UnityHub.AppImage
+
+    # Install ROS 2 Humble
+    sudo apt update
+    sudo apt install ros-humble-desktop ros-humble-ros-tcp-endpoint
+    ```
+  </TabItem>
+  <TabItem value="macos" label="macOS">
+    ```bash
+    # Download Unity Hub
+    # https://unity.com/download
+
+    # Install ROS 2 via Docker (native macOS support limited)
+    docker pull osrf/ros:humble-desktop
+    ```
+  </TabItem>
+</Tabs>
+
+**Hardware Requirements**:
+- **Tier A (Simulation Only)**: 16GB RAM, GTX 1650 or better (integrated GPUs may struggle)
+- **Tier B (Edge AI)**: Not applicable for this chapter
+- **Tier C (Physical Robot)**: Not applicable for this chapter
+
+---
+
+## Why Unity for Robotics?
+
+While Gazebo excels at physics accuracy, Unity provides:
+
+- **Photorealistic Rendering**: High-quality lighting, shadows, and materials for realistic environments
+- **Human-Robot Interaction (HRI)**: Simulate pedestrians, workers, customers in robot operating environments
+- **VR/AR Support**: Deploy scenes to Quest, HoloLens for immersive testing
+- **Performance**: Optimized rendering pipeline can achieve 60+ FPS on modest hardware
+- **Asset Ecosystem**: Thousands of pre-made 3D models (furniture, buildings, vegetation) on Unity Asset Store
+
+**Use Case**: Test a service robot navigating a crowded café before deploying to the real location.
+
+---
+
+## Section 1: Unity Setup and ROS-TCP-Connector
+
+### Installing Unity 2022 LTS
+
+1. **Download Unity Hub** from https://unity.com/download
+2. **Install Unity 2022.3 LTS** (Long-Term Support):
+   - Open Unity Hub → Installs → Add
+   - Select **2022.3.X LTS** (latest patch version)
+   - Modules to include:
+     - ✅ Windows Build Support (Windows)
+     - ✅ Linux Build Support (Linux/WSL users)
+     - ✅ Documentation (recommended)
+
+3. **Create New Project**:
+   - Unity Hub → Projects → New Project
+   - Template: **3D (URP)** - Universal Render Pipeline for better performance
+   - Project Name: `Module2UnityRendering`
+   - Location: `module-2-digital-twin/src/ch2_unity_rendering/UnityProject/`
+
+### Installing ROS-TCP-Connector
+
+The **ROS-TCP-Connector** Unity package enables communication between Unity and ROS 2 via TCP/IP sockets.
+
+**Method 1: Unity Package Manager (Recommended)**
+
+1. Open your Unity project
+2. **Window → Package Manager**
+3. Click **+** → **Add package from git URL**
+4. Enter: `https://github.com/Unity-Technologies/ROS-TCP-Connector.git?path=/com.unity.robotics.ros-tcp-connector`
+5. Click **Add** - Unity will download and install the package
+
+**Method 2: Manual Installation**
+
+```bash
+cd module-2-digital-twin/src/ch2_unity_rendering/UnityProject/Packages
+git clone https://github.com/Unity-Technologies/ROS-TCP-Connector.git
+```
+
+Then in Unity: **Window → Package Manager → + → Add package from disk** → Select `package.json` from cloned repo.
+
+### Configuring ROS Connection
+
+Create a C# script to establish connection to ROS 2:
+
+```csharp title="ROSConnection.cs"
+using UnityEngine;
+using Unity.Robotics.ROSTCPConnector;
+
+public class ROSConnection : MonoBehaviour
+{
+    void Start()
+    {
+        // Connect to ROS-TCP-Endpoint running on ROS 2 machine
+        ROSConnection.GetOrCreateInstance().Connect(
+            hostName: "localhost",  // Change to ROS machine IP if remote
+            port: 10000             // Default ROS-TCP-Endpoint port
+        );
+
+        Debug.Log("Connected to ROS 2 at localhost:10000");
+    }
+}
+```
+
+**Attach to GameObject**:
+1. Create empty GameObject: **Hierarchy → Right-click → Create Empty** → Name it `ROSManager`
+2. Drag `ROSConnection.cs` onto `ROSManager` in Inspector
+
+---
+
+## Section 2: URDF Import Pipeline
+
+Unity can import URDF files using the **URDF Importer** package.
+
+### Installing URDF Importer
+
+1. **Package Manager → + → Add package from git URL**
+2. Enter: `https://github.com/Unity-Technologies/URDF-Importer.git?path=/com.unity.robotics.urdf-importer`
+3. Click **Add**
+
+### Importing a Robot URDF
+
+**Example: Import the differential drive robot from Chapter 1**
+
+1. **Copy URDF to Unity Project**:
+   ```bash
+   cp module-2-digital-twin/src/ch1_gazebo_physics/urdf/diff_drive_robot.urdf \
+      module-2-digital-twin/src/ch2_unity_rendering/UnityProject/Assets/URDF/
+   ```
+
+2. **Import in Unity**:
+   - **Assets → Import Robot from URDF**
+   - Select `diff_drive_robot.urdf`
+   - **Import Settings**:
+     - ✅ Create Rigidbodies
+     - ✅ Create ArticulationBody (Unity's joint system)
+     - ✅ Import Materials (if .dae/.obj meshes have embedded materials)
+   - Click **Import**
+
+3. **Result**: Robot appears in Scene with:
+   - ArticulationBody components on each link
+   - Colliders matching URDF collision geometry
+   - Visual meshes with default materials
+
+### Customizing Materials
+
+Unity's default import creates gray materials. To add realistic appearance:
+
+1. **Create Material**:
+   - **Assets → Create → Material** → Name it `RobotMetal`
+2. **Configure Material** (URP/Lit shader):
+   - **Metallic**: 0.8 (shiny metal)
+   - **Smoothness**: 0.7 (polished surface)
+   - **Base Color**: RGB(150, 150, 160) - steel gray
+3. **Apply to Robot**:
+   - Select robot link GameObject → Inspector → Mesh Renderer → Material → Assign `RobotMetal`
+
+**Advanced**: Use Substance Painter or Blender to create PBR (Physically-Based Rendering) textures (albedo, metallic, normal maps).
+
+---
+
+## Section 3: Bidirectional ROS 2 Communication
+
+### Subscribing to ROS 2 Topics (ROS → Unity)
+
+**Use Case**: Visualize robot joint states published by Gazebo
+
+```csharp title="JointController.cs" showLineNumbers
+using UnityEngine;
+using Unity.Robotics.ROSTCPConnector;
+using RosMessageTypes.Sensor;
+
+public class JointController : MonoBehaviour
+{
+    public ArticulationBody[] joints;  // Assign in Inspector
+    private ROSConnection ros;
+
+    void Start()
+    {
+        ros = ROSConnection.GetOrCreateInstance();
+        ros.Subscribe<JointStateMsg>("/joint_states", UpdateJointStates);
+    }
+
+    void UpdateJointStates(JointStateMsg msg)
+    {
+        // Match ROS joint names to Unity ArticulationBodies
+        for (int i = 0; i < msg.name.Length; i++)
+        {
+            string jointName = msg.name[i];
+            float position = (float)msg.position[i];  // ROS uses double, Unity uses float
+
+            // Find corresponding Unity joint
+            ArticulationBody joint = FindJointByName(jointName);
+            if (joint != null)
+            {
+                // Update joint position (Unity uses degrees, ROS uses radians)
+                var drive = joint.xDrive;
+                drive.target = position * Mathf.Rad2Deg;
+                joint.xDrive = drive;
+            }
+        }
+    }
+
+    ArticulationBody FindJointByName(string name)
+    {
+        foreach (var joint in joints)
+        {
+            if (joint.name == name) return joint;
+        }
+        return null;
+    }
+}
+```
+
+<details>
+<summary>Line-by-line explanation</summary>
+
+- **Line 1-3**: Import Unity and ROS-TCP-Connector namespaces
+- **Line 7**: Array of ArticulationBodies (Unity's joint representation) - assign in Inspector
+- **Line 11-14**: Subscribe to `/joint_states` ROS topic with callback `UpdateJointStates`
+- **Line 16-34**: Callback function that updates Unity joints when ROS publishes new states
+- **Line 20-21**: Extract joint name and position from ROS message
+- **Line 24**: Find Unity ArticulationBody matching ROS joint name
+- **Line 28-30**: Set joint target position (convert radians → degrees)
+- **Line 36-42**: Helper to find joint by name in array
+
+</details>
+
+### Publishing to ROS 2 Topics (Unity → ROS)
+
+**Use Case**: Send keyboard input from Unity to control robot in Gazebo
+
+```csharp title="TeleopPublisher.cs" showLineNumbers
+using UnityEngine;
+using Unity.Robotics.ROSTCPConnector;
+using RosMessageTypes.Geometry;
+
+public class TeleopPublisher : MonoBehaviour
+{
+    private ROSConnection ros;
+    public string topicName = "/cmd_vel";
+
+    void Start()
+    {
+        ros = ROSConnection.GetOrCreateInstance();
+        ros.RegisterPublisher<TwistMsg>(topicName);
+    }
+
+    void Update()
+    {
+        // Read keyboard input (WASD controls)
+        float linear = 0f;
+        float angular = 0f;
+
+        if (Input.GetKey(KeyCode.W)) linear = 0.5f;   // Forward
+        if (Input.GetKey(KeyCode.S)) linear = -0.5f;  // Backward
+        if (Input.GetKey(KeyCode.A)) angular = 1.0f;  // Turn left
+        if (Input.GetKey(KeyCode.D)) angular = -1.0f; // Turn right
+
+        // Publish Twist message
+        TwistMsg msg = new TwistMsg
+        {
+            linear = new Vector3Msg { x = linear, y = 0, z = 0 },
+            angular = new Vector3Msg { x = 0, y = 0, z = angular }
+        };
+
+        ros.Publish(topicName, msg);
+    }
+}
+```
+
+<details>
+<summary>Line-by-line explanation</summary>
+
+- **Line 8**: Topic name to publish to (default: `/cmd_vel` for robot velocity commands)
+- **Line 13**: Register as publisher for Twist messages (velocity commands)
+- **Line 16-35**: Update called every frame (~60 Hz)
+- **Line 19-20**: Initialize linear and angular velocities
+- **Line 22-25**: Map keyboard keys to velocities (WASD control scheme)
+- **Line 28-32**: Create Twist message with linear (forward/back) and angular (turn) velocities
+- **Line 34**: Publish message to ROS topic
+
+</details>
+
+---
+
+## Section 4: Human-Robot Interaction Scenarios
+
+### Creating Virtual Humans
+
+**Use Case**: Simulate a robot navigating around pedestrians in a warehouse
+
+**Method 1: Unity Asset Store**
+
+1. **Asset Store → Search "Low Poly People"** (free/paid packs)
+2. **Download and Import** to project
+3. **Add Animator Component** for walking animations
+4. **Add NavMeshAgent** for autonomous navigation
+
+**Method 2: Mixamo (Recommended)**
+
+1. Visit https://www.mixamo.com (free with Adobe account)
+2. **Download Character**: Select "Y Bot" or similar humanoid
+3. **Download Animation**: Select "Walking", "Idle", "Running" animations
+4. **Import to Unity**: Drag .fbx files to Assets/Models/
+5. **Setup Animator Controller**:
+   - **Assets → Create → Animator Controller** → Name it `HumanAnimator`
+   - **Double-click to open** → Drag animation clips into states
+   - **Transitions**: Idle ↔ Walking based on "Speed" parameter
+
+### Virtual Human Behavior Script
+
+```csharp title="HumanBehavior.cs" showLineNumbers
+using UnityEngine;
+using UnityEngine.AI;
+
+public class HumanBehavior : MonoBehaviour
+{
+    public Transform[] waypoints;  // Patrol waypoints
+    private NavMeshAgent agent;
+    private Animator animator;
+    private int currentWaypoint = 0;
+
+    void Start()
+    {
+        agent = GetComponent<NavMeshAgent>();
+        animator = GetComponent<Animator>();
+        GoToNextWaypoint();
+    }
+
+    void Update()
+    {
+        // Update animation based on movement speed
+        float speed = agent.velocity.magnitude;
+        animator.SetFloat("Speed", speed);
+
+        // Check if reached waypoint
+        if (!agent.pathPending && agent.remainingDistance < 0.5f)
+        {
+            GoToNextWaypoint();
+        }
+    }
+
+    void GoToNextWaypoint()
+    {
+        if (waypoints.Length == 0) return;
+
+        agent.destination = waypoints[currentWaypoint].position;
+        currentWaypoint = (currentWaypoint + 1) % waypoints.Length;  // Loop
+    }
+}
+```
+
+**Setup**:
+1. Add `NavMeshAgent` component to human GameObject
+2. Attach `HumanBehavior.cs` script
+3. Create empty GameObjects as waypoints (positions in scene)
+4. Assign waypoints array in Inspector
+5. **Navigation → Bake NavMesh** for the scene floor
+
+---
+
+## Section 5: Performance Optimization
+
+### Target: 60 FPS on GTX 1650
+
+**Common Bottlenecks**:
+- Too many draw calls (1000+ objects)
+- High-polygon models (100k+ triangles per object)
+- Real-time shadows on many lights
+- Inefficient shaders
+
+### Optimization Technique 1: Level of Detail (LOD)
+
+**Concept**: Use lower-polygon models when objects are far from camera
+
+1. **Create LOD Group**:
+   - Select robot model → **Component → LOD Group**
+   - **LOD 0 (0-50%)**: Full detail mesh (10k triangles)
+   - **LOD 1 (50-80%)**: Medium detail (3k triangles)
+   - **LOD 2 (80-100%)**: Low detail (500 triangles)
+
+2. **Generate LOD Meshes** (in Blender):
+   - Import robot mesh
+   - **Modifiers → Decimate** → Ratio: 0.3 (30% of original faces)
+   - Export as `robot_lod1.fbx`, `robot_lod2.fbx`
+
+3. **Assign in Unity**:
+   - Drag LOD meshes into corresponding LOD Group slots
+
+### Optimization Technique 2: Occlusion Culling
+
+**Concept**: Don't render objects blocked by walls/buildings
+
+1. **Mark Static Objects**:
+   - Select environment objects (walls, floors, furniture)
+   - Inspector → Check **Static** → **Occluder Static**
+
+2. **Bake Occlusion**:
+   - **Window → Rendering → Occlusion Culling**
+   - **Bake** tab → Click **Bake**
+   - Result: Unity pre-computes visibility and culls hidden objects
+
+### Optimization Technique 3: Batching
+
+**Concept**: Combine multiple objects into single draw call
+
+**Static Batching**:
+- Mark non-moving objects as **Static**
+- Unity automatically batches them at build time
+
+**Dynamic Batching**:
+- Objects with same material and < 300 vertices are auto-batched
+- Keep materials shared across multiple objects
+
+### Optimization Technique 4: Lighting
+
+**Avoid**:
+- ❌ Real-time shadows on 10+ lights
+- ❌ Area lights in real-time mode
+
+**Recommended**:
+- ✅ **1-2 real-time directional lights** (sun/moon)
+- ✅ **Baked lightmaps** for static environment lighting
+- ✅ **Reflection probes** for shiny surfaces
+
+**Setup Baked Lighting**:
+1. **Window → Rendering → Lighting**
+2. **Mixed Lighting → Baked Indirect**
+3. **Generate Lighting** → Wait for bake (5-30 min for large scenes)
+
+### Performance Profiling
+
+**Unity Profiler** (Window → Analysis → Profiler):
+- **CPU Usage**: Check for script bottlenecks
+- **Rendering**: Monitor draw calls (target < 500), batches
+- **GPU Usage**: Check shader complexity
+
+**Target Metrics** (GTX 1650):
+- **Draw Calls**: < 500
+- **Triangles**: < 1 million total in view
+- **SetPass Calls**: < 100 (material switches)
+- **Frame Time**: < 16.6ms (60 FPS)
+
+---
+
+## Exercises
+
+### Exercise 2.1: Import Custom Robot URDF
+
+**Difficulty**: 🟢 Beginner
+
+**Task**: Import the 3-DOF arm URDF from Chapter 1 into Unity and apply custom materials.
+
+**Steps**:
+1. Copy `3dof_arm.urdf` to Unity project's Assets/URDF/ folder
+2. Import using **Assets → Import Robot from URDF**
+3. Create 3 materials for the 3 links (red, green, blue)
+4. Apply materials to corresponding link meshes
+5. Test joint movement using Unity's ArticulationBody inspector
+
+**Acceptance Criteria**:
+- [ ] Robot imports without errors
+- [ ] All 3 joints are ArticulationBodies with correct limits
+- [ ] Materials are distinct and visually appealing
+- [ ] Screenshot saved showing robot in Scene view
+
+### Exercise 2.2: Optimize Scene for 60 FPS
+
+**Difficulty**: 🟡 Intermediate
+
+**Task**: Create a warehouse scene with 100+ objects and optimize to maintain 60 FPS.
+
+**Steps**:
+1. Import warehouse environment asset (or create with primitives)
+2. Add 100 boxes/crates using prefab instantiation
+3. Add 5 virtual humans with NavMeshAgent patrolling
+4. Profile scene (Window → Analysis → Profiler)
+5. Apply optimizations:
+   - Static batching for crates
+   - LOD groups for detailed models
+   - Occlusion culling bake
+6. Achieve < 16.6ms frame time
+
+**Acceptance Criteria**:
+- [ ] Scene has 100+ rendered objects
+- [ ] Profiler shows 60+ FPS in Play mode
+- [ ] Draw calls < 500
+- [ ] Screenshot of Profiler stats attached
+
+**Hints**:
+<details>
+<summary>Hint: Reducing Draw Calls</summary>
+
+- Use same material for all crates (enables batching)
+- Mark crates as **Static**
+- Use **GPU Instancing** on materials (Inspector → Material → Enable GPU Instancing)
+</details>
+
+### Exercise 2.3: Deploy Scene to VR Headset (Optional)
+
+**Difficulty**: 🔴 Advanced
+
+**Task**: Deploy the HRI warehouse scene to Meta Quest 2 or similar VR headset.
+
+**Prerequisites**:
+- Meta Quest 2/3 or SteamVR-compatible headset
+- Unity XR Plugin installed
+
+**Steps**:
+1. Install XR Plugin Management: **Edit → Project Settings → XR Plugin Management**
+2. Enable **Oculus** (Quest) or **OpenXR** (SteamVR)
+3. Add XR Rig to scene: **GameObject → XR → XR Origin (Action-based)**
+4. Configure build settings: **File → Build Settings → Android** (Quest) or **PC, Mac & Linux** (SteamVR)
+5. Build and deploy to headset
+
+**Acceptance Criteria**:
+- [ ] Scene runs on VR headset at 72+ FPS (Quest 2 native refresh rate)
+- [ ] User can look around and walk (teleport or smooth locomotion)
+- [ ] Robot is visible and animating based on ROS 2 joint states
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><strong>Issue</strong>: "ROSConnection failed: Connection refused"</summary>
+
+**Cause**: ROS-TCP-Endpoint is not running on the ROS 2 machine
+
+**Solution**:
+```bash
+# On ROS 2 machine (Terminal 1)
+source /opt/ros/humble/setup.bash
+ros2 run ros_tcp_endpoint default_server_endpoint
+
+# Expected output:
+# [INFO] ROS-TCP Server listening on 0.0.0.0:10000
+```
+
+Then in Unity:
+- **Robotics → ROS Settings**
+- Verify **ROS IP Address** matches ROS machine IP
+- Verify **ROS Port** is 10000
+
+</details>
+
+<details>
+<summary><strong>Issue</strong>: URDF imports but robot is invisible or black</summary>
+
+**Cause**: Materials/shaders not compatible with URP (Universal Render Pipeline)
+
+**Solution**:
+1. Select all materials in Assets/
+2. **Edit → Rendering → Materials → Convert Selected Materials to URP**
+3. If still black, manually assign URP/Lit shader:
+   - Select material → Inspector → Shader → Universal Render Pipeline → Lit
+
+</details>
+
+<details>
+<summary><strong>Issue</strong>: ArticulationBody joints explode or jitter violently</summary>
+
+**Cause**: Incorrect mass/inertia in URDF, or collision geometry overlapping
+
+**Solution**:
+1. **Check URDF inertia values** (see Chapter 1 formulas)
+2. **Disable collisions between parent-child links**:
+   - Select child link → ArticulationBody → **Colliders → Ignore Collisions with Parent**
+3. **Reduce physics timestep**:
+   - **Edit → Project Settings → Time → Fixed Timestep** → Change from 0.02 to 0.01 (more stable)
+
+</details>
+
+<details>
+<summary><strong>Issue</strong>: Unity Editor crashes when importing large URDF</summary>
+
+**Cause**: URDF references high-polygon meshes (> 1 million triangles)
+
+**Solution**:
+1. **Simplify meshes in Blender before import**:
+   - Open mesh → Modifiers → Decimate → Ratio 0.1
+   - Export as .fbx with lower triangle count
+2. **Import URDF in batches**: Comment out some links in URDF, import, then uncomment
+
+</details>
+
+<details>
+<summary><strong>Issue</strong>: Frame rate drops below 30 FPS with multiple robots</summary>
+
+**Cause**: Too many real-time physics calculations or draw calls
+
+**Solution**:
+1. **Reduce physics update rate** for distant robots:
+   - Use **Rigidbody.Sleep()** when robot is idle
+2. **LOD Groups**: Apply to all robot models
+3. **Disable shadows** on robot models:
+   - Mesh Renderer → Cast Shadows → Off
+4. **Camera culling distance**: **Main Camera → Inspector → Clipping Planes → Far** → Reduce from 1000 to 100
+
+</details>
+
+---
+
+## Key Takeaways
+
+:::tip Summary
+- **Unity complements Gazebo**: Use Unity for visualization/HRI, Gazebo for physics accuracy
+- **ROS-TCP-Connector**: Enables bidirectional communication between Unity and ROS 2 (TCP port 10000)
+- **URDF Importer**: Automatically converts URDF to Unity GameObjects with ArticulationBodies
+- **Performance is critical**: Target 60 FPS through LOD, occlusion culling, batching, and baked lighting
+- **HRI scenarios**: Virtual humans with NavMeshAgent enable realistic pedestrian simulation
+- **VR deployment**: Unity scenes can deploy to Quest/SteamVR for immersive robot testing
+:::
+
+---
+
+## Next Steps
+
+**For Self-Paced Learners**:
+- [ ] Complete Exercise 2.1 (import custom URDF)
+- [ ] Complete Exercise 2.2 (optimize for 60 FPS)
+- [ ] Explore Unity Asset Store for environment packs
+- [ ] Proceed to **Chapter 3: Sensor Simulation**
+
+**For Cohort-Based Learners** (Week 7, Days 1-3):
+- [ ] Complete Exercise 2.1 (core skill)
+- [ ] Attempt Exercise 2.2 (share profiler screenshots in forum)
+- [ ] Optional: Exercise 2.3 (VR deployment) for advanced learners
+
+---
+
+## Advanced Extensions (Optional)
+
+:::note For Experts
+If you found this chapter straightforward, try these additional challenges:
+
+1. **Procedural Environment Generation**: Use Unity's Terrain system to generate outdoor environments programmatically
+2. **Multiplayer HRI**: Use Unity Netcode to simulate multiple robots controlled by different ROS 2 instances
+3. **Machine Learning Integration**: Use Unity ML-Agents to train virtual humans to avoid robots
+4. **Custom Shaders**: Write HLSL shaders for specialized robot displays (heat maps, range sensors)
+5. **Video Recording**: Use Unity Recorder package to capture high-quality videos for presentations
+:::
+
+---
+
+## Additional Resources
+
+- 📖 [Unity Robotics Hub](https://github.com/Unity-Technologies/Unity-Robotics-Hub)
+- 📖 [ROS-TCP-Connector Documentation](https://github.com/Unity-Technologies/ROS-TCP-Connector/blob/main/README.md)
+- 📖 [Unity Performance Optimization Guide](https://docs.unity3d.com/Manual/OptimizingGraphicsPerformance.html)
+- 🎥 [Unity for Robotics Tutorial Series](https://www.youtube.com/playlist?list=PLXSe9D0eFE4PJkKjJ-Dn48hC4dqbkwYD-)
+- 📄 [Research: Unity for Sim-to-Real Transfer](https://arxiv.org/abs/2103.04616)
+- 🔧 [Unity Asset Store - Low Poly People](https://assetstore.unity.com/packages/3d/characters/humanoids/low-poly-people-159582)
+
+---
+
+**Chapter Navigation**:
+- ← Previous: [Chapter 1: Physics Simulation in Gazebo](./chapter1-gazebo-physics)
+- → Next: [Chapter 3: Sensor Simulation](./chapter3-sensor-simulation)

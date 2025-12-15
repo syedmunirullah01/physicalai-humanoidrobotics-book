@@ -1,0 +1,72 @@
+# Module 3: The AI-Robot Brain (NVIDIA Isaac™)
+# Python dependencies for educational exercises and utilities
+
+# Testing framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# ROS 2 Python libraries
+rospkg>=1.5.0
+
+# Configuration and data handling
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# Numerical computing
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Computer vision and perception
+opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
+Pillow>=10.0.0
+
+# Data visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Performance metrics and profiling
+psutil>=5.9.0
+gputil>=1.4.0
+
+# JSON and data serialization
+jsonschema>=4.19.0
+
+# Progress bars for long-running tasks
+tqdm>=4.66.0
+
+# Logging and debugging
+colorlog>=6.7.0
+
+# Type checking (development)
+mypy>=1.5.0
+types-PyYAML>=6.0.12
+
+# Code quality (development)
+black>=23.7.0
+flake8>=6.1.0
+isort>=5.12.0
+
+# Documentation generation (optional)
+sphinx>=7.1.0
+sphinx-rtd-theme>=1.3.0
+
+# Jupyter notebooks for interactive exercises (optional)
+jupyter>=1.0.0
+ipywidgets>=8.1.0
+
+# Isaac Sim Python API (installed via Omniverse)
+# Note: isaac-sim package comes bundled with Isaac Sim installation
+# Users should have $ISAAC_SIM_PATH/python added to PYTHONPATH
+
+# Isaac ROS dependencies (installed via apt)
+# Note: isaac_ros packages installed via ROS 2 apt repositories
+# sudo apt install ros-humble-isaac-ros-visual-slam
+
+# Nav2 dependencies (installed via apt)
+# Note: nav2 packages installed via ROS 2 apt repositories
+# sudo apt install ros-humble-navigation2
+
+# CUDA/cuDNN (system dependencies)
+# Note: CUDA toolkit bundled with Isaac Sim
+# Users should have CUDA 11.8+ installed for GPU acceleration

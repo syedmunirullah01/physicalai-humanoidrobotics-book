@@ -1,0 +1,24 @@
+# Python dependencies for Physical AI & Humanoid Robotics textbook project
+
+# Readability analysis (for preface and content validation)
+textstat==0.7.3
+
+# Translation and AI features (for future use)
+openai>=1.0.0
+qdrant-client>=1.7.0
+
+# Content quality validation
+language-tool-python>=2.7.1
+
+# YAML processing (for glossaries and configuration)
+pyyaml>=6.0
+
+# Markdown processing
+markdown>=3.5
+
+# Transformers for tokenization (RAG chunking)
+transformers>=4.35.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0

@@ -1,0 +1,954 @@
+---
+sidebar_position: 5
+slug: /module3/chapter4-integration
+title: Chapter 4 - System Integration and Advanced Topics
+description: Complete guide to integrating Isaac Sim, VSLAM, and Nav2 into a cohesive humanoid robotics system
+---
+
+# Chapter 4: System Integration and Advanced Topics
+
+This chapter covers the integration of Isaac Sim, Visual SLAM, and Navigation 2 into a complete humanoid robotics system, along with advanced topics for production deployment.
+
+## System Integration Overview
+
+### Architecture Integration
+The complete Isaac ROS humanoid system integrates three major components:
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Isaac Sim     │    │  Isaac ROS VSLAM │    │  Isaac ROS Nav2 │
+│                 │    │                  │    │                 │
+│  - Physics      │    │  - Stereo Vision │    │  - Path Planning│
+│  - Sensors      │───▶│  - Localization  │───▶│  - Navigation   │
+│  - Environment  │    │  - Mapping      │    │  - Recovery     │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         ▲                       ▲                       ▲
+         └───────────────────────┼───────────────────────┘
+                                 │
+                    ┌─────────────────────┐
+                    │  Integration Layer  │
+                    │  - TF Management    │
+                    │  - Data Sync        │
+                    │  - Resource Coord   │
+                    │  - Safety Monitor   │
+                    └─────────────────────┘
+```
+
+### Data Flow Integration
+1. Isaac Sim provides simulated robot and environment
+2. VSLAM processes stereo images for localization and mapping
+3. Nav2 uses VSLAM pose for navigation planning and execution
+4. Integration layer manages coordination and safety
+
+## Integration Architecture
+
+### System Coordinator
+```python
+# Example: System coordinator for managing all components
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import Bool
+from sensor_msgs.msg import Image, CameraInfo
+from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
+import threading
+import time
+
+class SystemCoordinator(Node):
+    def __init__(self):
+        super().__init__('system_coordinator')
+
+        # Publishers for coordination
+        self.system_status_pub = self.create_publisher(Bool, '/system/ready', 10)
+        self.emergency_stop_pub = self.create_publisher(Bool, '/emergency_stop', 10)
+
+        # Subscribers for monitoring
+        self.vslam_status_sub = self.create_subscription(
+            Bool, '/vslam/ready', self.vslam_status_callback, 10)
+        self.nav2_status_sub = self.create_subscription(
+            Bool, '/nav2/ready', self.nav2_status_callback, 10)
+        self.safety_status_sub = self.create_subscription(
+            Bool, '/safety/ok', self.safety_status_callback, 10)
+
+        # System state tracking
+        self.vslam_ready = False
+        self.nav2_ready = False
+        self.safety_ok = True
+        self.system_ready = False
+
+        # Timer for system health checks
+        self.health_timer = self.create_timer(1.0, self.health_check)
+
+        # Initialize components
+        self.initialize_components()
+
+    def initialize_components(self):
+        """Initialize all system components"""
+        self.get_logger().info('Initializing Isaac ROS system components...')
+
+        # Initialize VSLAM
+        self.initialize_vslam()
+
+        # Initialize Nav2
+        self.initialize_nav2()
+
+        # Initialize safety systems
+        self.initialize_safety()
+
+    def initialize_vslam(self):
+        """Initialize VSLAM components"""
+        self.get_logger().info('Initializing VSLAM...')
+        # VSLAM initialization logic would go here
+        # This might include camera calibration, feature initialization, etc.
+
+    def initialize_nav2(self):
+        """Initialize Nav2 components"""
+        self.get_logger().info('Initializing Nav2...')
+        # Nav2 initialization logic would go here
+        # This might include costmap initialization, planner setup, etc.
+
+    def initialize_safety(self):
+        """Initialize safety systems"""
+        self.get_logger().info('Initializing safety systems...')
+        # Safety system initialization logic would go here
+
+    def vslam_status_callback(self, msg):
+        """Handle VSLAM status updates"""
+        self.vslam_ready = msg.data
+        self.update_system_status()
+
+    def nav2_status_callback(self, msg):
+        """Handle Nav2 status updates"""
+        self.nav2_ready = msg.data
+        self.update_system_status()
+
+    def safety_status_callback(self, msg):
+        """Handle safety status updates"""
+        self.safety_ok = msg.data
+        self.update_system_status()
+
+    def update_system_status(self):
+        """Update overall system status"""
+        self.system_ready = self.vslam_ready and self.nav2_ready and self.safety_ok
+
+        # Publish system status
+        status_msg = Bool()
+        status_msg.data = self.system_ready
+        self.system_status_pub.publish(status_msg)
+
+        if self.system_ready:
+            self.get_logger().info('System is ready for operation!')
+        else:
+            self.get_logger().info('System not ready - checking components...')
+
+    def health_check(self):
+        """Periodic health check of all components"""
+        # Check if components are still responsive
+        if not self.vslam_ready:
+            self.get_logger().warn('VSLAM component not responding')
+            self.restart_component('vslam')
+        elif not self.nav2_ready:
+            self.get_logger().warn('Nav2 component not responding')
+            self.restart_component('nav2')
+        elif not self.safety_ok:
+            self.get_logger().warn('Safety system issue detected')
+            self.trigger_safety_procedure()
+
+    def restart_component(self, component_name):
+        """Restart a specific component"""
+        self.get_logger().info(f'Restarting {component_name} component...')
+        # Component restart logic would go here
+
+    def trigger_safety_procedure(self):
+        """Trigger emergency safety procedure"""
+        self.get_logger().error('Safety issue detected - triggering emergency stop')
+        emergency_msg = Bool()
+        emergency_msg.data = True
+        self.emergency_stop_pub.publish(emergency_msg)
+```
+
+## Resource Management and Optimization
+
+### GPU Resource Coordination
+```python
+# Example: GPU resource coordinator
+import pycuda.driver as cuda
+import pycuda.autoinit
+from pycuda.tools import make_default_context
+import threading
+
+class GPUResourceManager:
+    def __init__(self):
+        # Initialize CUDA context
+        self.cuda_context = cuda.Device(0).make_context()
+
+        # Resource pools
+        self.vslam_memory_pool = None
+        self.nav2_memory_pool = None
+
+        # Lock for resource access
+        self.resource_lock = threading.Lock()
+
+        # GPU memory fraction for each component
+        self.gpu_memory_fractions = {
+            'vslam': 0.4,  # 40% for VSLAM
+            'nav2': 0.3,   # 30% for Nav2
+            'other': 0.3   # 30% for other processes
+        }
+
+    def allocate_gpu_resources(self, component, size_bytes):
+        """Allocate GPU memory for a specific component"""
+        with self.resource_lock:
+            if component == 'vslam':
+                # Allocate memory for VSLAM processing
+                return cuda.mem_alloc(int(size_bytes * self.gpu_memory_fractions['vslam']))
+            elif component == 'nav2':
+                # Allocate memory for Nav2 processing
+                return cuda.mem_alloc(int(size_bytes * self.gpu_memory_fractions['nav2']))
+            else:
+                # Allocate remaining memory
+                return cuda.mem_alloc(int(size_bytes * self.gpu_memory_fractions['other']))
+
+    def optimize_gpu_sharing(self):
+        """Optimize GPU sharing between components"""
+        # Implement GPU sharing optimization strategies
+        # This could include context switching, memory pooling, etc.
+        pass
+```
+
+## Synchronization and Timing
+
+### Data Synchronization Layer
+```python
+# Example: Data synchronization manager
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+from message_filters import ApproximateTimeSynchronizer, Subscriber
+import message_filters
+
+class DataSynchronizer:
+    def __init__(self, node):
+        self.node = node
+
+        # Create synchronized subscribers for stereo images
+        self.left_sub = Subscriber(
+            node, Image, '/camera/left/image_rect',
+            qos_profile=QoSProfile(
+                reliability=ReliabilityPolicy.RELIABLE,
+                history=HistoryPolicy.KEEP_LAST,
+                depth=5
+            )
+        )
+
+        self.right_sub = Subscriber(
+            node, Image, '/camera/right/image_rect',
+            qos_profile=QoSProfile(
+                reliability=ReliabilityPolicy.RELIABLE,
+                history=HistoryPolicy.KEEP_LAST,
+                depth=5
+            )
+        )
+
+        # Synchronize stereo images
+        self.ts = ApproximateTimeSynchronizer(
+            [self.left_sub, self.right_sub],
+            queue_size=10,
+            slop=0.1  # 100ms tolerance
+        )
+        self.ts.registerCallback(self.stereo_callback)
+
+        # Store synchronized data
+        self.synchronized_data = []
+
+    def stereo_callback(self, left_msg, right_msg):
+        """Handle synchronized stereo images"""
+        # Process synchronized stereo pair
+        stereo_pair = {
+            'left': left_msg,
+            'right': right_msg,
+            'timestamp': left_msg.header.stamp
+        }
+        self.synchronized_data.append(stereo_pair)
+
+        # Forward to VSLAM
+        self.forward_to_vslam(stereo_pair)
+
+    def forward_to_vslam(self, stereo_pair):
+        """Forward synchronized data to VSLAM"""
+        # Implementation to send data to VSLAM pipeline
+        pass
+```
+
+## Safety Integration
+
+### Multi-Layer Safety System
+```python
+# Example: Comprehensive safety manager
+class SafetyManager:
+    def __init__(self, node):
+        self.node = node
+        self.safety_level = 0  # 0 = operational, 1 = warning, 2 = emergency
+        self.emergency_active = False
+
+        # Safety thresholds
+        self.safety_thresholds = {
+            'collision_distance': 0.5,  # meters
+            'max_velocity': 0.5,        # m/s
+            'max_angular_velocity': 0.5, # rad/s
+            'tracking_loss_time': 5.0,   # seconds
+            'system_health': 0.8         # percentage
+        }
+
+        # Initialize safety monitoring
+        self.setup_safety_monitoring()
+
+    def setup_safety_monitoring(self):
+        """Set up safety monitoring for all components"""
+        # Monitor VSLAM tracking
+        self.vslam_tracking_timer = self.node.create_timer(
+            0.1, self.monitor_vslam_tracking
+        )
+
+        # Monitor navigation safety
+        self.nav_safety_timer = self.node.create_timer(
+            0.05, self.monitor_navigation_safety
+        )
+
+        # Monitor system health
+        self.system_health_timer = self.node.create_timer(
+            1.0, self.monitor_system_health
+        )
+
+    def monitor_vslam_tracking(self):
+        """Monitor VSLAM tracking quality"""
+        # Check if VSLAM is tracking properly
+        tracking_quality = self.get_vslam_tracking_quality()
+
+        if tracking_quality < 0.5:  # Low tracking quality
+            self.safety_level = max(self.safety_level, 1)
+            self.node.get_logger().warn('VSLAM tracking quality low')
+        elif tracking_quality > 0.8:  # Good tracking quality
+            if self.safety_level > 0:
+                self.safety_level -= 1
+
+    def monitor_navigation_safety(self):
+        """Monitor navigation safety"""
+        # Check for obstacles
+        min_distance = self.get_min_obstacle_distance()
+
+        if min_distance < self.safety_thresholds['collision_distance']:
+            self.trigger_emergency_stop()
+        elif min_distance < self.safety_thresholds['collision_distance'] * 2:
+            self.safety_level = max(self.safety_level, 1)
+
+    def monitor_system_health(self):
+        """Monitor overall system health"""
+        health_score = self.calculate_system_health()
+
+        if health_score < self.safety_thresholds['system_health']:
+            self.safety_level = max(self.safety_level, 1)
+            self.node.get_logger().warn('System health below threshold')
+
+    def trigger_emergency_stop(self):
+        """Trigger emergency stop procedure"""
+        if not self.emergency_active:
+            self.emergency_active = True
+            self.safety_level = 2
+
+            # Stop all motion
+            self.publish_emergency_stop()
+
+            # Log emergency
+            self.node.get_logger().error('EMERGENCY STOP ACTIVATED')
+
+    def publish_emergency_stop(self):
+        """Publish emergency stop command"""
+        # Implementation to stop all robot motion
+        pass
+
+    def get_vslam_tracking_quality(self):
+        """Get VSLAM tracking quality metric"""
+        # Implementation to get tracking quality
+        return 0.9  # Placeholder
+
+    def get_min_obstacle_distance(self):
+        """Get minimum obstacle distance from sensors"""
+        # Implementation to get obstacle distance
+        return 2.0  # Placeholder
+
+    def calculate_system_health(self):
+        """Calculate overall system health score"""
+        # Implementation to calculate health score
+        return 0.95  # Placeholder
+```
+
+## Performance Optimization
+
+### System-Wide Optimization
+```python
+# Example: Performance optimizer
+class PerformanceOptimizer:
+    def __init__(self, node):
+        self.node = node
+        self.performance_metrics = {}
+
+        # Performance thresholds
+        self.performance_thresholds = {
+            'vslam_min_fps': 30.0,
+            'nav2_max_plan_time': 0.1,  # seconds
+            'system_latency_max': 0.05,  # seconds
+            'cpu_usage_max': 80.0,       # percentage
+            'gpu_usage_max': 85.0        # percentage
+        }
+
+        # Initialize performance monitoring
+        self.setup_performance_monitoring()
+
+    def setup_performance_monitoring(self):
+        """Set up performance monitoring for all components"""
+        # Monitor VSLAM performance
+        self.vslam_monitor_timer = self.node.create_timer(
+            1.0, self.monitor_vslam_performance
+        )
+
+        # Monitor Nav2 performance
+        self.nav2_monitor_timer = self.node.create_timer(
+            1.0, self.monitor_nav2_performance
+        )
+
+        # Monitor system resources
+        self.system_monitor_timer = self.node.create_timer(
+            2.0, self.monitor_system_resources
+        )
+
+    def monitor_vslam_performance(self):
+        """Monitor VSLAM performance metrics"""
+        fps = self.get_vslam_fps()
+
+        if fps < self.performance_thresholds['vslam_min_fps']:
+            self.node.get_logger().warn(f'VSLAM FPS below threshold: {fps}')
+            self.optimize_vslam_parameters()
+
+    def monitor_nav2_performance(self):
+        """Monitor Nav2 performance metrics"""
+        plan_time = self.get_nav2_plan_time()
+
+        if plan_time > self.performance_thresholds['nav2_max_plan_time']:
+            self.node.get_logger().warn(f'Nav2 plan time too high: {plan_time}')
+            self.optimize_nav2_parameters()
+
+    def optimize_vslam_parameters(self):
+        """Optimize VSLAM parameters for performance"""
+        # Reduce feature count if needed
+        # Adjust processing frequency
+        # Modify other performance parameters
+        pass
+
+    def optimize_nav2_parameters(self):
+        """Optimize Nav2 parameters for performance"""
+        # Adjust costmap resolution
+        # Modify planning frequency
+        # Optimize controller parameters
+        pass
+
+    def get_vslam_fps(self):
+        """Get current VSLAM FPS"""
+        # Implementation to get FPS
+        return 35.0  # Placeholder
+
+    def get_nav2_plan_time(self):
+        """Get current Nav2 planning time"""
+        # Implementation to get plan time
+        return 0.05  # Placeholder
+```
+
+## Integration Launch Files
+
+### Complete System Integration Launch
+```python
+# integration_launch.py
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
+from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+
+def generate_launch_description():
+    # Launch configuration variables
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    enable_vslam = LaunchConfiguration('enable_vslam')
+    enable_nav2 = LaunchConfiguration('enable_nav2')
+    enable_isaac_sim = LaunchConfiguration('enable_isaac_sim')
+    enable_rviz = LaunchConfiguration('enable_rviz')
+    enable_monitoring = LaunchConfiguration('enable_monitoring')
+    robot_namespace = LaunchConfiguration('robot_namespace')
+    params_file = LaunchConfiguration('params_file')
+
+    # Declare launch arguments
+    declare_use_sim_time_cmd = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true'
+    )
+
+    declare_enable_vslam_cmd = DeclareLaunchArgument(
+        'enable_vslam',
+        default_value='true',
+        description='Enable Isaac ROS VSLAM'
+    )
+
+    declare_enable_nav2_cmd = DeclareLaunchArgument(
+        'enable_nav2',
+        default_value='true',
+        description='Enable Isaac ROS Nav2'
+    )
+
+    declare_enable_isaac_sim_cmd = DeclareLaunchArgument(
+        'enable_isaac_sim',
+        default_value='true',
+        description='Enable Isaac Sim integration'
+    )
+
+    declare_enable_rviz_cmd = DeclareLaunchArgument(
+        'enable_rviz',
+        default_value='true',
+        description='Enable RViz visualization'
+    )
+
+    declare_enable_monitoring_cmd = DeclareLaunchArgument(
+        'enable_monitoring',
+        default_value='true',
+        description='Enable system monitoring'
+    )
+
+    declare_robot_namespace_cmd = DeclareLaunchArgument(
+        'robot_namespace',
+        default_value='humanoid_robot',
+        description='Robot namespace for multi-robot deployments'
+    )
+
+    declare_params_file_cmd = DeclareLaunchArgument(
+        'params_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('isaac_ros_integration'),
+            'config', 'integration_params.yaml'
+        ]),
+        description='Full path to the ROS2 parameters file'
+    )
+
+    # Group actions based on configuration
+    isaac_sim_group = GroupAction(
+        condition=IfCondition(enable_isaac_sim),
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([
+                    PathJoinSubstitution([
+                        FindPackageShare('isaac_ros_integration'),
+                        'launch',
+                        'isaac_sim.launch.py'
+                    ])
+                ])
+            )
+        ]
+    )
+
+    vslam_group = GroupAction(
+        condition=IfCondition(enable_vslam),
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([
+                    PathJoinSubstitution([
+                        FindPackageShare('isaac_ros_integration'),
+                        'launch',
+                        'vslam.launch.py'
+                    ])
+                ])
+            )
+        ]
+    )
+
+    nav2_group = GroupAction(
+        condition=IfCondition(enable_nav2),
+        actions=[
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([
+                    PathJoinSubstitution([
+                        FindPackageShare('isaac_ros_integration'),
+                        'launch',
+                        'nav2.launch.py'
+                    ])
+                ])
+            )
+        ]
+    )
+
+    rviz_group = GroupAction(
+        condition=IfCondition(enable_rviz),
+        actions=[
+            Node(
+                package='rviz2',
+                executable='rviz2',
+                name='rviz2',
+                arguments=['-d', PathJoinSubstitution([
+                    FindPackageShare('isaac_ros_integration'),
+                    'config', 'integration.rviz'
+                ])],
+                parameters=[{'use_sim_time': use_sim_time}],
+                output='screen'
+            )
+        ]
+    )
+
+    # Integration monitoring node
+    integration_monitor_node = Node(
+        package='isaac_ros_integration',
+        executable='integration_monitor',
+        name='integration_monitor',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'robot_namespace': robot_namespace,
+            'enable_monitoring': enable_monitoring
+        }],
+        condition=IfCondition(enable_monitoring),
+        output='screen'
+    )
+
+    # System coordinator node
+    system_coordinator_node = Node(
+        package='isaac_ros_integration',
+        executable='system_coordinator',
+        name='system_coordinator',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'robot_namespace': robot_namespace
+        }],
+        output='screen'
+    )
+
+    # Safety manager node
+    safety_manager_node = Node(
+        package='isaac_ros_integration',
+        executable='safety_manager',
+        name='safety_manager',
+        parameters=[{
+            'use_sim_time': use_sim_time,
+            'robot_namespace': robot_namespace
+        }],
+        output='screen'
+    )
+
+    return LaunchDescription([
+        # Launch Arguments
+        declare_use_sim_time_cmd,
+        declare_enable_vslam_cmd,
+        declare_enable_nav2_cmd,
+        declare_enable_isaac_sim_cmd,
+        declare_enable_rviz_cmd,
+        declare_enable_monitoring_cmd,
+        declare_robot_namespace_cmd,
+        declare_params_file_cmd,
+
+        # Groups
+        isaac_sim_group,
+        vslam_group,
+        nav2_group,
+        rviz_group,
+
+        # Individual nodes
+        integration_monitor_node,
+        system_coordinator_node,
+        safety_manager_node,
+    ])
+```
+
+## Deployment Workflows
+
+### Production Deployment Strategy
+```yaml
+# deployment_config.yaml
+deployment:
+  environments:
+    simulation:
+      vslam:
+        num_features: 1000
+        max_frame_rate: 60.0
+        enable_global_ba: true
+      nav2:
+        controller_frequency: 20.0
+        local_costmap_resolution: 0.05
+    development:
+      vslam:
+        num_features: 800
+        max_frame_rate: 30.0
+        enable_global_ba: true
+      nav2:
+        controller_frequency: 15.0
+        local_costmap_resolution: 0.05
+    production:
+      vslam:
+        num_features: 600
+        max_frame_rate: 25.0
+        enable_global_ba: false  # Disabled for performance
+      nav2:
+        controller_frequency: 10.0
+        local_costmap_resolution: 0.1
+
+ci_cd:
+  stages:
+    - build
+    - test
+    - deploy
+  build:
+    dockerfile: Dockerfile.humanoid
+    platforms:
+      - linux/arm64  # Jetson
+      - linux/amd64  # x86 simulation
+  test:
+    simulation_tests: true
+    integration_tests: true
+    safety_tests: true
+  deploy:
+    target_platforms:
+      - jetson_orin
+      - x86_simulation
+    deployment_strategy: rolling
+    rollback_on_failure: true
+```
+
+## Monitoring and Maintenance
+
+### System Monitoring
+```python
+# Example: System monitoring dashboard
+class SystemMonitor:
+    def __init__(self, node):
+        self.node = node
+        self.metrics = {
+            'vslam_fps': 0.0,
+            'nav2_success_rate': 0.0,
+            'cpu_usage': 0.0,
+            'gpu_usage': 0.0,
+            'memory_usage': 0.0,
+            'safety_events': 0
+        }
+
+        # Initialize monitoring
+        self.setup_monitoring()
+
+    def setup_monitoring(self):
+        """Set up system monitoring"""
+        # Performance monitoring
+        self.performance_monitor_timer = self.node.create_timer(
+            1.0, self.collect_performance_metrics
+        )
+
+        # Health monitoring
+        self.health_monitor_timer = self.node.create_timer(
+            5.0, self.check_system_health
+        )
+
+    def collect_performance_metrics(self):
+        """Collect performance metrics from all components"""
+        # Collect VSLAM metrics
+        self.metrics['vslam_fps'] = self.get_vslam_fps()
+
+        # Collect Nav2 metrics
+        self.metrics['nav2_success_rate'] = self.get_nav2_success_rate()
+
+        # Collect system metrics
+        self.metrics['cpu_usage'] = self.get_cpu_usage()
+        self.metrics['gpu_usage'] = self.get_gpu_usage()
+        self.metrics['memory_usage'] = self.get_memory_usage()
+
+    def get_vslam_fps(self):
+        """Get VSLAM frames per second"""
+        # Implementation to get FPS
+        return 35.0
+
+    def get_nav2_success_rate(self):
+        """Get Nav2 navigation success rate"""
+        # Implementation to get success rate
+        return 0.95
+
+    def get_cpu_usage(self):
+        """Get CPU usage percentage"""
+        # Implementation to get CPU usage
+        import psutil
+        return psutil.cpu_percent()
+
+    def get_gpu_usage(self):
+        """Get GPU usage percentage"""
+        # Implementation to get GPU usage
+        try:
+            import GPUtil
+            gpus = GPUtil.getGPUs()
+            if gpus:
+                return gpus[0].load * 100
+        except:
+            pass
+        return 0.0
+
+    def get_memory_usage(self):
+        """Get memory usage percentage"""
+        # Implementation to get memory usage
+        import psutil
+        return psutil.virtual_memory().percent
+
+    def check_system_health(self):
+        """Check overall system health"""
+        health_report = {
+            'timestamp': self.node.get_clock().now().to_msg(),
+            'metrics': self.metrics.copy(),
+            'health_status': self.calculate_health_status()
+        }
+
+        # Log health report
+        self.node.get_logger().info(f'System health: {health_report["health_status"]}')
+
+        return health_report
+
+    def calculate_health_status(self):
+        """Calculate overall system health status"""
+        if (self.metrics['cpu_usage'] > 90 or
+            self.metrics['gpu_usage'] > 95 or
+            self.metrics['memory_usage'] > 90):
+            return 'WARNING'
+        elif self.metrics['vslam_fps'] < 20 or self.metrics['nav2_success_rate'] < 0.8:
+            return 'DEGRADED'
+        else:
+            return 'HEALTHY'
+```
+
+## Troubleshooting and Debugging
+
+### Common Integration Issues and Solutions
+
+#### 1. TF Tree Synchronization Problems
+- **Symptoms**: Components can't find transforms between frames
+- **Solutions**:
+  - Verify TF tree consistency across all nodes
+  - Check timing synchronization
+  - Use `tf2_tools view_frames` to visualize TF tree
+  - Increase transform timeout values
+
+#### 2. Data Synchronization Issues
+- **Symptoms**: Components receive data with incorrect timestamps
+- **Solutions**:
+  - Use message_filters for proper synchronization
+  - Ensure all nodes use the same clock source
+  - Implement proper QoS policies
+  - Add timestamp validation
+
+#### 3. Resource Contention
+- **Symptoms**: Performance degradation when all components run
+- **Solutions**:
+  - Implement resource scheduling
+  - Use CPU affinity for critical processes
+  - Optimize GPU memory management
+  - Adjust processing frequencies
+
+#### 4. Safety System Interference
+- **Symptoms**: Safety systems triggering unnecessarily
+- **Solutions**:
+  - Calibrate safety thresholds appropriately
+  - Implement proper filtering for sensor noise
+  - Add hysteresis to safety triggers
+  - Validate safety system logic
+
+### Debugging Tools and Commands
+```bash
+# Check TF tree
+ros2 run tf2_tools view_frames
+
+# Monitor all topics
+ros2 topic list | xargs -I {} ros2 topic hz {}
+
+# Check system performance
+ros2 run isaac_ros_integration system_monitor
+
+# Debug VSLAM
+ros2 run isaac_ros_visual_slam visual_slam_debugger
+
+# Debug Nav2
+ros2 run nav2_util lifecycle_bringup
+
+# Monitor integration status
+ros2 topic echo /system/ready
+```
+
+## Best Practices for Integration
+
+### 1. Modularity and Decoupling
+- Design components to be as independent as possible
+- Use well-defined interfaces between components
+- Implement proper error handling and fallbacks
+- Allow components to run independently for testing
+
+### 2. Performance Considerations
+- Profile each component individually
+- Optimize the integrated system as a whole
+- Consider real-time constraints
+- Implement adaptive performance scaling
+
+### 3. Safety-First Design
+- Implement safety at every level
+- Use multiple safety layers
+- Test safety systems thoroughly
+- Document safety procedures
+
+### 4. Monitoring and Observability
+- Implement comprehensive logging
+- Monitor system health continuously
+- Create dashboards for key metrics
+- Set up alerting for critical issues
+
+## Exercises
+
+### Exercise 1: System Integration
+1. Launch all three components together
+2. Verify proper data flow between components
+3. Test system coordination and communication
+4. Validate that safety systems work correctly
+
+### Exercise 2: Performance Optimization
+1. Profile the integrated system performance
+2. Identify bottlenecks and optimize
+3. Test performance under various loads
+4. Validate that optimization doesn't compromise safety
+
+### Exercise 3: Safety Validation
+1. Test emergency stop procedures
+2. Verify safety system responses
+3. Test system recovery from safety events
+4. Validate safety system reliability
+
+## Future Enhancements
+
+### Advanced Integration Features
+- **Machine Learning Integration**: Add learning-based components
+- **Cloud Integration**: Connect to cloud services for advanced processing
+- **Multi-Robot Coordination**: Extend to multi-robot systems
+- **Adaptive Systems**: Self-adapting to environment changes
+
+### Research Directions
+- **Advanced Perception**: Novel sensor fusion techniques
+- **Learning-Based Navigation**: AI-driven navigation strategies
+- **Human-Robot Interaction**: Advanced interaction capabilities
+- **Edge AI Optimization**: More efficient edge processing
+
+## Summary
+
+This chapter has covered the comprehensive integration of Isaac Sim, Visual SLAM, and Navigation 2 into a complete humanoid robotics system. We've explored:
+
+- System architecture and component coordination
+- Resource management and optimization
+- Safety integration and monitoring
+- Performance optimization strategies
+- Deployment workflows and best practices
+- Troubleshooting and debugging techniques
+
+The integration of these three major components creates a powerful platform for humanoid robotics applications, combining simulation, perception, and navigation capabilities into a unified system.
+
+With the completion of this chapter, we have covered all major aspects of implementing Isaac ROS for humanoid robotics, from individual components to full system integration.

@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<!--
+  Simple rigid body URDF for demonstrating gravity and collision physics
+
+  Learning objectives:
+  - Understanding mass and inertia tensor specification
+  - Collision geometry vs visual geometry
+  - Proper inertia calculation for a cuboid
+-->
+<robot name="rigid_body">
+  <link name="base_link">
+    <!-- Visual representation (what you see in Gazebo) -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.5 0.3 0.2"/>  <!-- width=50cm, depth=30cm, height=20cm -->
+      </geometry>
+      <material name="blue">
+        <color rgba="0.2 0.4 0.8 1.0"/>
+      </material>
+    </visual>
+
+    <!-- Collision geometry (simplified for physics engine) -->
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.5 0.3 0.2"/>  <!-- Match visual for simple primitives -->
+      </geometry>
+      <surface>
+        <friction>
+          <ode>
+            <mu>0.8</mu>   <!-- Coefficient of friction (0=ice, 1=rubber) -->
+            <mu2>0.8</mu2>
+          </ode>
+        </friction>
+      </surface>
+    </collision>
+
+    <!-- Inertial properties (CRITICAL for stable physics simulation) -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="5.0"/>  <!-- 5 kg (aluminum block density ~2.7 g/cm³) -->
+
+      <!-- Inertia tensor for solid cuboid (w=0.5, d=0.3, h=0.2):
+           Ixx = (1/12) * m * (d² + h²) = (1/12) * 5.0 * (0.3² + 0.2²) = 0.054
+           Iyy = (1/12) * m * (w² + h²) = (1/12) * 5.0 * (0.5² + 0.2²) = 0.121
+           Izz = (1/12) * m * (w² + d²) = (1/12) * 5.0 * (0.5² + 0.3²) = 0.142
+      -->
+      <inertia ixx="0.054" ixy="0.0" ixz="0.0"
+               iyy="0.121" iyz="0.0"
+               izz="0.142"/>
+    </inertial>
+  </link>
+
+  <!-- Gazebo-specific material (renders in Gazebo GUI) -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Blue</material>
+    <mu1>0.8</mu1>
+    <mu2>0.8</mu2>
+  </gazebo>
+</robot>

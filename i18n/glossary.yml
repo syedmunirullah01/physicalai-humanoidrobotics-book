@@ -1,0 +1,156 @@
+# Technical Glossary: English-Urdu Term Mappings
+# Version: 1.0.0
+# Last Updated: 2025-12-10
+# Purpose: Support consistent translation of technical terms in Physical AI & Humanoid Robotics textbook
+
+terms:
+  - en: "Physical AI"
+    ur: "فزیکل اے آئی"
+    context: "AI systems with physical embodiment (robots, humanoids)"
+    definition: "Artificial Intelligence that interacts with the physical world through robotic embodiment"
+
+  - en: "Foundation Models"
+    ur: "بنیادی ماڈلز"
+    context: "Large pre-trained AI models (GPT, Claude, LLaMA)"
+    definition: "Large-scale neural networks trained on broad data that can be adapted to many tasks"
+
+  - en: "Embodied AI"
+    ur: "مجسم اے آئی"
+    context: "AI in physical form, synonym for Physical AI"
+    definition: "AI systems that have a physical body and can interact with the environment"
+
+  - en: "Digital Twin"
+    ur: "ڈیجیٹل جڑواں"
+    context: "Simulated replica of a physical robot"
+    definition: "Virtual representation of a physical system used for testing and development"
+
+  - en: "Vision-Language-Action (VLA)"
+    ur: "بصارت-زبان-عمل"
+    context: "Multimodal robot control models"
+    definition: "AI models that combine visual perception, language understanding, and physical action"
+
+  - en: "Simulation Environment"
+    ur: "نقالی کا ماحول"
+    context: "Virtual training ground (Isaac Sim, Gazebo)"
+    definition: "Software platform for testing robots in virtual worlds before physical deployment"
+
+  - en: "Edge Computing"
+    ur: "کنارے کی کمپیوٹنگ"
+    context: "On-device processing (Jetson, neural networks on robot)"
+    definition: "Computational processing performed locally on the robot rather than in the cloud"
+
+  - en: "ROS 2"
+    ur: "آر او ایس 2"
+    context: "Robot Operating System version 2"
+    definition: "Open-source middleware framework for robot software development"
+
+  - en: "Humanoid Robot"
+    ur: "انسان نما روبوٹ"
+    context: "Robot with human-like form factor"
+    definition: "Robot designed to resemble and move like a human being"
+
+  - en: "Infrastructure Compatibility"
+    ur: "بنیادی ڈھانچے کی مطابقت"
+    context: "Why humanoids can use human-designed spaces (doors, stairs, tools)"
+    definition: "Ability of humanoid robots to navigate environments built for humans"
+
+  - en: "Kinematics"
+    ur: "حرکیات"
+    context: "Study of motion without considering forces"
+    definition: "Mathematical description of robot motion and joint angles"
+
+  - en: "Gazebo"
+    ur: "گزیبو"
+    context: "Open-source robot simulation platform"
+    definition: "3D simulator for testing robots in realistic environments"
+
+  - en: "NVIDIA Isaac Sim"
+    ur: "این ویڈیا آئزک سم"
+    context: "Advanced physics-based simulation for AI robots"
+    definition: "High-fidelity simulation platform with photorealistic rendering"
+
+  - en: "Whisper"
+    ur: "وِسپر"
+    context: "OpenAI speech recognition model"
+    definition: "AI model for converting speech to text in multiple languages"
+
+  - en: "Capstone Project"
+    ur: "اختتامی منصوبہ"
+    context: "Final integrated project at course completion"
+    definition: "Comprehensive project demonstrating all skills learned in the course"
+
+  - en: "Three-Tier Hardware"
+    ur: "تین سطحی ہارڈویئر"
+    context: "Tier A (Simulation), Tier B (Edge AI), Tier C (Physical Robot)"
+    definition: "Structured approach to hardware accessibility from zero-cost simulation to physical robots"
+
+  - en: "Emergency Stop (E-Stop)"
+    ur: "ہنگامی رُکاوٹ"
+    context: "Safety mechanism to immediately halt robot"
+    definition: "Hardware or software mechanism to stop robot motion in emergencies"
+
+  - en: "Dead Man Switch"
+    ur: "خودکار بند سوئچ"
+    context: "Safety pattern requiring continuous operator input"
+    definition: "Control mechanism that stops robot if operator releases control"
+
+  - en: "Learning Outcomes"
+    ur: "سیکھنے کے نتائج"
+    context: "Measurable objectives for each module"
+    definition: "Specific skills and knowledge students will gain from a lesson"
+
+  - en: "Bloom's Taxonomy"
+    ur: "بلوم کی درجہ بندی"
+    context: "Framework for learning objectives (remember, understand, apply, analyze, evaluate, create)"
+    definition: "Hierarchical model of thinking skills from basic recall to creative synthesis"
+
+  # Module 1: ROS 2 Fundamentals Terms
+  - en: "Node"
+    ur: "نوڈ"
+    context: "ROS 2 computational process"
+    definition: "Independent process that performs computation in ROS 2 system"
+
+  - en: "Topic"
+    ur: "موضوع"
+    context: "ROS 2 message bus for pub-sub communication"
+    definition: "Named channel for asynchronous message passing between nodes"
+
+  - en: "Service"
+    ur: "سروس"
+    context: "ROS 2 request-response communication pattern"
+    definition: "Synchronous communication where client requests and server responds"
+
+  - en: "URDF"
+    ur: "یو آر ڈی ایف"
+    context: "Unified Robot Description Format - XML for robot structure"
+    definition: "Standard format for describing robot physical structure, joints, and sensors"
+
+  - en: "QoS (Quality of Service)"
+    ur: "سروس کا معیار"
+    context: "ROS 2 message delivery reliability settings"
+    definition: "Configuration for message reliability (reliable vs best-effort)"
+
+  - en: "rclpy"
+    ur: "آر سی ایل پائی"
+    context: "ROS 2 Python client library"
+    definition: "Python API for creating ROS 2 nodes, publishers, and subscribers"
+
+  - en: "colcon"
+    ur: "کولکون"
+    context: "ROS 2 build tool"
+    definition: "Command-line tool for building ROS 2 workspaces"
+
+  - en: "Publisher"
+    ur: "شائع کنندہ"
+    context: "ROS 2 node that sends messages to topic"
+    definition: "Component that publishes messages to a topic for subscribers"
+
+  - en: "Subscriber"
+    ur: "سبسکرائبر"
+    context: "ROS 2 node that receives messages from topic"
+    definition: "Component that listens to messages on a topic"
+
+  - en: "TF Tree"
+    ur: "ٹی ایف ٹری"
+    context: "ROS 2 coordinate frame transformation hierarchy"
+    definition: "Tree structure showing relationships between robot coordinate frames"

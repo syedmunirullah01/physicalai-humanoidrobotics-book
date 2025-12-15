@@ -1,0 +1,275 @@
+# Isaac ROS Visual SLAM Parameters
+# Chapter 2: Isaac ROS VSLAM Configuration
+
+# Input Configuration
+input:
+  # Number of cameras (1 for monocular, 2 for stereo)
+  num_cameras: 2
+
+  # Minimum number of images to initialize tracking
+  min_num_images: 30
+
+  # Maximum frame rate for processing
+  max_frame_rate: 60.0  # Hz
+
+# Feature Detection Parameters
+feature_detection:
+  # Type of feature detector to use
+  feature_detector_type: "ORB"  # Options: ORB, FAST, HARRIS
+
+  # Number of features to detect per image
+  num_features: 1000
+
+  # Pyramid scaling factor
+  scale_factor: 1.2
+
+  # Number of pyramid levels
+  num_levels: 8
+
+  # Edge threshold for feature detection
+  edge_threshold: 19
+
+  # WTA_K parameter for ORB
+  wta_k: 2
+
+  # Score type for ORB (0=HARRIS_SCORE, 1=FAST_SCORE)
+  score_type: 0
+
+  # Patch size for ORB
+  patch_size: 31
+
+  # FAST threshold
+  fast_threshold: 20
+
+# Motion Estimation Parameters
+motion_estimation:
+  # Reprojection error threshold for valid matches
+  reproj_err_threshold: 3.0  # pixels
+
+  # Minimum number of inliers for valid motion estimation
+  min_num_inliers: 15
+
+  # RANSAC confidence for motion estimation
+  ransac_confidence: 0.99
+
+  # RANSAC maximum iterations
+  ransac_max_iter: 1000
+
+# Loop Closure Parameters
+loop_closure:
+  # Enable loop closure detection
+  enable_loop_closure: true
+
+  # Frequency of loop closure checks (Hz)
+  loop_closure_frequency: 1.0
+
+  # Minimum score for loop closure detection
+  loop_closure_min_score: 0.7
+
+  # Enable pose graph optimizer
+  enable_pose_graph_optimizer: true
+
+  # Frequency of pose graph optimization (Hz)
+  pose_graph_optimizer_frequency: 1.0
+
+# Bundle Adjustment Parameters
+bundle_adjustment:
+  # Enable global bundle adjustment
+  enable_global_ba: true
+
+  # Frequency of global bundle adjustment (keyframes)
+  global_ba_frequency: 5
+
+  # Maximum number of iterations for global BA
+  global_ba_max_num_iterations: 100
+
+  # Enable local bundle adjustment
+  enable_local_ba: true
+
+  # Maximum number of iterations for local BA
+  local_ba_max_num_iterations: 20
+
+# Keyframe Selection Parameters
+keyframe_selection:
+  # Minimum translation for keyframe selection (meters)
+  min_translation_keyframe_delta: 0.1
+
+  # Minimum rotation for keyframe selection (radians)
+  min_rotation_keyframe_delta: 0.1
+
+  # Minimum number of features for tracking
+  min_num_features_for_tracking: 30
+
+# GPU Acceleration Parameters
+gpu_acceleration:
+  # Enable GPU acceleration
+  enable_gpu_acceleration: true
+
+  # GPU device ID
+  gpu_id: 0
+
+  # Number of CUDA streams to use
+  cuda_streams: 2
+
+  # Enable memory pooling
+  enable_memory_pool: true
+
+  # Memory pool size (bytes)
+  memory_pool_size: 67108864  # 64 MB
+
+# Output Configuration
+output:
+  # Enable rectified pose output
+  enable_rectified_pose: true
+
+  # Enable debug mode
+  enable_debug_mode: false
+
+  # Enable SLAM visualization
+  enable_slam_visualization: true
+
+  # Enable landmarks view
+  enable_landmarks_view: true
+
+  # Enable observations view (disable for performance)
+  enable_observations_view: false
+
+# Frame IDs
+frame_ids:
+  # Map frame ID
+  map_frame: "map"
+
+  # Odometry frame ID
+  odom_frame: "odom"
+
+  # Base frame ID (robot base)
+  base_frame: "base_link"
+
+  # Camera frame ID
+  camera_frame: "camera_link"
+
+# Performance Optimization
+performance:
+  # Enable performance metrics
+  enable_performance_metrics: true
+
+  # Performance metrics frequency (Hz)
+  performance_metrics_frequency: 1.0
+
+  # Enable memory usage monitoring
+  enable_memory_monitoring: true
+
+# Debug Configuration
+debug:
+  # Enable detailed logging
+  enable_detailed_logging: false
+
+  # Log level
+  log_level: "INFO"
+
+  # Enable visualization of internal states
+  enable_internal_visualization: false
+
+# Validation Configuration
+validation:
+  # Validation parameters for success criteria
+  success_criteria:
+    # SC-002: VSLAM frame rate >30 Hz
+    min_frame_rate_hz: 30.0
+
+    # SC-003: Trajectory drift <2% over 100m path
+    max_drift_percentage: 2.0
+
+    # Minimum number of features for stable tracking
+    min_stable_tracking_features: 50
+
+    # Maximum reprojection error for valid matches
+    max_reprojection_error: 5.0
+
+# Topic Remappings
+topic_remappings:
+  # Input topics
+  image_0: "/camera/left/image_rect"
+  camera_info_0: "/camera/left/camera_info"
+  image_1: "/camera/right/image_rect"
+  camera_info_1: "/camera/right/camera_info"
+
+  # Output topics
+  tracking_odometry: "/vslam/odometry"
+  vo_pose: "/vslam/vo_pose"
+  vo_pose_covariance: "/vslam/vo_pose_covariance"
+
+  # Visualization topics
+  landmarks_cloud: "/vslam/landmarks"
+  loop_closure_cloud: "/vslam/loop_closure"
+  pose_graph_nodes: "/vslam/pose_graph_nodes"
+  pose_graph_edges: "/vslam/pose_graph_edges"
+  keyframes: "/vslam/keyframes"
+
+# Service Names
+services:
+  # Reset service
+  reset_service: "/vslam/reset"
+
+  # Get all poses service
+  get_all_poses_service: "/vslam/get_all_poses"
+
+  # Save map service
+  save_map_service: "/vslam/save_map"
+
+  # Load map service
+  load_map_service: "/vslam/load_map"
+
+# Quality Assurance
+quality_assurance:
+  # Enable quality checks
+  enable_quality_checks: true
+
+  # Minimum tracking success rate (percentage)
+  min_tracking_success_rate: 90.0
+
+  # Maximum feature detection time (milliseconds)
+  max_feature_detection_time_ms: 20.0
+
+  # Maximum motion estimation time (milliseconds)
+  max_motion_estimation_time_ms: 30.0
+
+  # Minimum feature match ratio
+  min_feature_match_ratio: 0.3
+
+# Hardware Tier Configuration
+hardware_tier:
+  # Tier A: Simulation Only
+  tier_a:
+    num_features: 1000
+    max_frame_rate: 60.0
+    enable_global_ba: true
+    enable_loop_closure: true
+
+  # Tier B: Jetson Deployment
+  tier_b:
+    num_features: 800
+    max_frame_rate: 25.0
+    enable_global_ba: false  # Disable for performance on Jetson
+    enable_loop_closure: true
+
+  # Tier C: Physical Robot
+  tier_c:
+    num_features: 1000
+    max_frame_rate: 30.0
+    enable_global_ba: true
+    enable_loop_closure: true
+
+# Safety Configuration
+safety:
+  # Enable safety checks
+  enable_safety_checks: true
+
+  # Maximum allowed velocity (m/s) - emergency stop if exceeded
+  max_allowed_velocity: 1.0
+
+  # Enable emergency stop on tracking loss
+  enable_emergency_stop_on_tracking_loss: false
+
+  # Enable dead man switch
+  enable_dead_man_switch: true

@@ -1,0 +1,376 @@
+/**
+ * ModuleCard Styles
+ *
+ * Research-grade card for module overviews.
+ * Features gradient header, progress tracking, and comprehensive metadata.
+ */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(0, 217, 255, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  min-height: 440px;
+  max-height: 600px;
+  height: 100%;
+  transition: all var(--transition-smooth);
+  will-change: transform, box-shadow, border-color;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* ==================== HOVER STATE ==================== */
+
+.card:not(.locked):hover {
+  border-color: rgba(0, 217, 255, 0.4);
+  box-shadow: 0 10px 25px -5px rgba(0, 217, 255, 0.2);
+  transform: translateY(-4px);
+}
+
+/* ==================== HEADER ==================== */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-lg);
+  background: linear-gradient(135deg, #00d9ff 0%, #a855f7 100%);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin: 0;
+  margin-bottom: var(--spacing-md);
+}
+
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  flex: 1;
+}
+
+.moduleNumber {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: #000000;
+  margin: 0;
+  line-height: var(--line-height-tight);
+}
+
+.lockIcon {
+  font-size: var(--font-size-2xl);
+  opacity: 0.8;
+}
+
+/* ==================== DESCRIPTION ==================== */
+
+.description {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ==================== METADATA GRID ==================== */
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: rgba(0, 217, 255, 0.05);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 217, 255, 0.1);
+}
+
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.metaLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metaValue {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.difficultyBadge {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  border: 2px solid;
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  display: inline-block;
+  width: fit-content;
+}
+
+/* ==================== TAGS ==================== */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.tag {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  padding: 4px 12px;
+  background: rgba(0, 217, 255, 0.1);
+  border: 1px solid rgba(0, 217, 255, 0.3);
+  border-radius: var(--radius-full);
+  color: var(--color-primary-light);
+}
+
+/* ==================== PROGRESS ==================== */
+
+.progressContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.progressBar {
+  flex: 1;
+  height: 12px;
+  background: rgba(0, 217, 255, 0.1);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  border: 1px solid rgba(0, 217, 255, 0.2);
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #00d9ff, #a855f7);
+  transition: width var(--transition-smooth);
+  will-change: width;
+  border-radius: inherit;
+}
+
+.progressLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* ==================== CTA BUTTON ==================== */
+
+.ctaButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #00d9ff, #22d3ee);
+  color: #000000;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  will-change: transform, box-shadow;
+  margin-top: auto;
+  width: 100%;
+}
+
+.ctaButton:not(.disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 217, 255, 0.3);
+}
+
+.ctaButton:not(.disabled):active {
+  transform: translateY(0);
+}
+
+.ctaButton.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.arrowIcon {
+  transition: transform var(--transition-base);
+}
+
+.ctaButton:not(.disabled):hover .arrowIcon {
+  transform: translateX(4px);
+}
+
+/* ==================== BADGES ==================== */
+
+.completedBadge {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* ==================== LOCKED STATE ==================== */
+
+.locked {
+  opacity: 0.7;
+}
+
+.lockedOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(2px);
+}
+
+.lockedOverlay p {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  text-align: center;
+  margin: 0;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/* Tablet (768px - 1023px) */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .card {
+    min-height: 380px;
+  }
+
+  .title {
+    font-size: var(--font-size-lg);
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .description {
+    font-size: var(--font-size-sm);
+    -webkit-line-clamp: 3;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .card {
+    padding: var(--spacing-md);
+    min-height: auto;
+    gap: var(--spacing-md);
+  }
+
+  .header {
+    padding: var(--spacing-md);
+    margin: 0;
+    margin-bottom: var(--spacing-sm);
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+
+  .title {
+    font-size: var(--font-size-lg);
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+  }
+
+  .description {
+    font-size: var(--font-size-sm);
+    -webkit-line-clamp: 4;
+  }
+
+  .tags {
+    gap: var(--spacing-xs);
+  }
+
+  .tag {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+  }
+
+  .ctaButton {
+    padding: 10px 16px;
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+
+/* High contrast mode */
+@media (prefers-contrast: more) {
+  .card {
+    border-width: 2px;
+    border-color: rgba(0, 217, 255, 0.6);
+  }
+
+  .metaGrid {
+    border-width: 2px;
+  }
+
+  .tag {
+    border-width: 2px;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .progressFill,
+  .ctaButton {
+    transition: none;
+    will-change: auto;
+  }
+
+  .card:not(.locked):hover {
+    transform: none;
+  }
+
+  .ctaButton:not(.disabled):hover {
+    transform: none;
+  }
+
+  .ctaButton:not(.disabled):hover .arrowIcon {
+    transform: none;
+  }
+}
