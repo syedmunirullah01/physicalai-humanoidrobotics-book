@@ -1,0 +1,536 @@
+# Isaac ROS VSLAM Contract
+# ROS 2 topics, services, and actions for Visual SLAM (Chapter 2)
+
+version: "1.0.0"
+namespace: /isaac_ros_vslam
+framework: ROS 2 Humble/Jazzy
+package: isaac_ros_visual_slam
+
+# ============================================================================
+# TOPICS - VSLAM Input/Output
+# ============================================================================
+
+topics:
+  # INPUT: Camera streams (from Isaac Sim or physical cameras)
+  /isaac_ros_vslam/visual_slam/image_0:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 5
+    encoding: rgb8
+    description: Left camera image (or mono camera)
+    frame_rate: 60  # Hz (minimum 30 Hz recommended)
+
+  /isaac_ros_vslam/visual_slam/camera_info_0:
+    message_type: sensor_msgs/CameraInfo
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 5
+    description: Left camera calibration
+
+  /isaac_ros_vslam/visual_slam/image_1:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 5
+    encoding: rgb8
+    description: Right camera image (stereo only)
+    frame_rate: 60  # Hz
+
+  /isaac_ros_vslam/visual_slam/camera_info_1:
+    message_type: sensor_msgs/CameraInfo
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 5
+    description: Right camera calibration (stereo only)
+
+  # OUTPUT: Odometry and pose
+  /isaac_ros_vslam/visual_slam/tracking/odometry:
+    message_type: nav_msgs/Odometry
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 50
+    description: Visual odometry estimate (pose + velocity)
+    frame_rate: 60  # Hz (matches camera rate)
+    child_frame_id: "base_link"
+    frame_id: "odom"
+
+  /isaac_ros_vslam/visual_slam/tracking/vo_pose:
+    message_type: geometry_msgs/PoseStamped
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 50
+    description: Visual odometry pose only
+    frame_id: "odom"
+
+  /isaac_ros_vslam/visual_slam/tracking/vo_pose_covariance:
+    message_type: geometry_msgs/PoseWithCovarianceStamped
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 50
+    description: VO pose with 6x6 covariance matrix
+    frame_id: "odom"
+
+  # OUTPUT: Map visualization
+  /isaac_ros_vslam/visual_slam/vis/landmarks_cloud:
+    message_type: sensor_msgs/PointCloud2
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: 3D landmarks (sparse point cloud)
+    frame_id: "map"
+    update_rate: 1  # Hz
+
+  /isaac_ros_vslam/visual_slam/vis/loop_closure_cloud:
+    message_type: sensor_msgs/PointCloud2
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: Loop closure matches visualization
+    frame_id: "map"
+
+  /isaac_ros_vslam/visual_slam/vis/pose_graph_nodes:
+    message_type: visualization_msgs/MarkerArray
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: Pose graph nodes as markers
+    frame_id: "map"
+
+  /isaac_ros_vslam/visual_slam/vis/pose_graph_edges:
+    message_type: visualization_msgs/MarkerArray
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: Pose graph edges (odometry + loop closures)
+    frame_id: "map"
+
+  # OUTPUT: Status and diagnostics
+  /isaac_ros_vslam/visual_slam/status:
+    message_type: isaac_ros_visual_slam_interfaces/VisualSlamStatus
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: VSLAM pipeline status and health metrics
+    update_rate: 10  # Hz
+
+  /diagnostics:
+    message_type: diagnostic_msgs/DiagnosticArray
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: ROS 2 diagnostics (includes VSLAM health)
+
+  # OUTPUT: TF transforms
+  # Published via TF2 broadcaster (not a topic)
+  # Transforms: map -> odom, odom -> base_link
+
+# ============================================================================
+# SERVICES - VSLAM Control
+# ============================================================================
+
+services:
+  # Reset VSLAM state
+  /isaac_ros_vslam/visual_slam/reset:
+    service_type: isaac_ros_visual_slam_interfaces/Reset
+    description: Reset VSLAM state, clear map, restart tracking
+    request:
+      reset_map: bool                 # Clear map landmarks
+      reset_localization: bool        # Reset pose estimate
+    response:
+      success: bool
+      message: string
+
+  # Get tracking status
+  /isaac_ros_vslam/visual_slam/get_all_poses:
+    service_type: isaac_ros_visual_slam_interfaces/GetAllPoses
+    description: Retrieve all keyframe poses in map
+    request:
+      max_num_poses: int32            # Limit number of poses (0 = all)
+    response:
+      poses: geometry_msgs/PoseArray
+      timestamps: builtin_interfaces/Time[]
+      success: bool
+
+  # Save map to disk
+  /isaac_ros_vslam/visual_slam/save_map:
+    service_type: isaac_ros_visual_slam_interfaces/FilePath
+    description: Save VSLAM map to binary file
+    request:
+      file_path: string               # Absolute path to save location
+    response:
+      success: bool
+      message: string
+
+  # Load map from disk
+  /isaac_ros_vslam/visual_slam/load_map:
+    service_type: isaac_ros_visual_slam_interfaces/FilePath
+    description: Load previously saved VSLAM map
+    request:
+      file_path: string               # Absolute path to map file
+    response:
+      success: bool
+      message: string
+
+  # Set SLAM mode
+  /isaac_ros_vslam/visual_slam/set_slam_mode:
+    service_type: isaac_ros_visual_slam_interfaces/SetSlamMode
+    description: Switch between mapping and localization modes
+    request:
+      mode: int8                      # 0=SLAM (mapping), 1=Localization only
+    response:
+      success: bool
+      message: string
+
+# ============================================================================
+# ACTIONS - Long-running operations
+# ============================================================================
+
+actions:
+  # Relocalization (find pose in existing map)
+  /isaac_ros_vslam/visual_slam/relocalize:
+    action_type: isaac_ros_visual_slam_interfaces/Relocalize
+    description: Attempt to relocalize in loaded map
+    goal:
+      timeout_sec: float32            # Max time to attempt relocalization
+    feedback:
+      num_features_matched: int32
+      confidence: float32             # 0-1
+    result:
+      success: bool
+      final_pose: geometry_msgs/PoseWithCovarianceStamped
+      num_inliers: int32
+
+# ============================================================================
+# PARAMETERS - VSLAM Configuration
+# ============================================================================
+
+parameters:
+  # Input configuration
+  /isaac_ros_vslam/enable_rectified_pose:
+    type: bool
+    default: true
+    description: Enable camera pose rectification
+
+  /isaac_ros_vslam/enable_debug_mode:
+    type: bool
+    default: false
+    description: Enable verbose debug logging
+
+  /isaac_ros_vslam/enable_slam_visualization:
+    type: bool
+    default: true
+    description: Publish visualization topics (landmarks, pose graph)
+
+  /isaac_ros_vslam/enable_landmarks_view:
+    type: bool
+    default: true
+    description: Publish landmarks point cloud
+
+  /isaac_ros_vslam/enable_observations_view:
+    type: bool
+    default: false
+    description: Publish feature observations (high bandwidth)
+
+  # Frame IDs
+  /isaac_ros_vslam/map_frame:
+    type: string
+    default: "map"
+    description: TF frame ID for map
+
+  /isaac_ros_vslam/odom_frame:
+    type: string
+    default: "odom"
+    description: TF frame ID for odometry
+
+  /isaac_ros_vslam/base_frame:
+    type: string
+    default: "base_link"
+    description: TF frame ID for robot base
+
+  # Performance tuning
+  /isaac_ros_vslam/num_cameras:
+    type: int
+    default: 2                        # Stereo
+    range: [1, 2]
+    description: Number of cameras (1=mono, 2=stereo)
+
+  /isaac_ros_vslam/min_num_images:
+    type: int
+    default: 30
+    range: [10, 100]
+    description: Minimum images before initializing map
+
+  /isaac_ros_vslam/max_frame_rate:
+    type: double
+    default: 60.0
+    range: [10.0, 120.0]
+    description: Maximum processing frame rate (Hz)
+
+  # Feature detection
+  /isaac_ros_vslam/feature_detector_type:
+    type: string
+    default: "FAST"
+    allowed_values: ["FAST", "ORB", "HARRIS"]
+    description: Feature detector algorithm
+
+  /isaac_ros_vslam/num_features:
+    type: int
+    default: 1000
+    range: [100, 5000]
+    description: Target number of features per image
+
+  # Loop closure
+  /isaac_ros_vslam/enable_loop_closure:
+    type: bool
+    default: true
+    description: Enable loop closure detection
+
+  /isaac_ros_vslam/loop_closure_frequency:
+    type: double
+    default: 1.0                      # Hz
+    range: [0.1, 10.0]
+    description: Loop closure check frequency
+
+  /isaac_ros_vslam/loop_closure_min_score:
+    type: double
+    default: 0.7
+    range: [0.0, 1.0]
+    description: Minimum similarity score for loop closure
+
+  # GPU acceleration
+  /isaac_ros_vslam/gpu_id:
+    type: int
+    default: 0
+    description: GPU device ID for CUDA acceleration
+
+  /isaac_ros_vslam/enable_gpu_acceleration:
+    type: bool
+    default: true
+    description: Use GPU for feature extraction and matching
+
+# ============================================================================
+# CUSTOM MESSAGE DEFINITIONS (isaac_ros_visual_slam_interfaces)
+# ============================================================================
+
+custom_messages:
+  isaac_ros_visual_slam_interfaces/VisualSlamStatus:
+    fields:
+      - {name: header, type: std_msgs/Header}
+      - {name: tracking_status, type: uint8}      # 0=Lost, 1=Tracking, 2=Initializing
+      - {name: num_keyframes, type: uint32}
+      - {name: num_landmarks, type: uint32}
+      - {name: num_loop_closures, type: uint32}
+      - {name: vo_state, type: uint8}             # 0=Fail, 1=Success
+      - {name: integrator_state, type: uint8}
+      - {name: tracking_time_ms, type: float32}   # Processing time
+      - {name: tracking_frame_rate, type: float32}
+
+  isaac_ros_visual_slam_interfaces/Reset:
+    request:
+      - {name: reset_map, type: bool}
+      - {name: reset_localization, type: bool}
+    response:
+      - {name: success, type: bool}
+      - {name: message, type: string}
+
+  isaac_ros_visual_slam_interfaces/GetAllPoses:
+    request:
+      - {name: max_num_poses, type: int32}
+    response:
+      - {name: poses, type: geometry_msgs/PoseArray}
+      - {name: timestamps, type: builtin_interfaces/Time[]}
+      - {name: success, type: bool}
+
+  isaac_ros_visual_slam_interfaces/FilePath:
+    request:
+      - {name: file_path, type: string}
+    response:
+      - {name: success, type: bool}
+      - {name: message, type: string}
+
+  isaac_ros_visual_slam_interfaces/SetSlamMode:
+    request:
+      - {name: mode, type: int8}      # 0=SLAM, 1=Localization
+    response:
+      - {name: success, type: bool}
+      - {name: message, type: string}
+
+  isaac_ros_visual_slam_interfaces/Relocalize:
+    goal:
+      - {name: timeout_sec, type: float32}
+    feedback:
+      - {name: num_features_matched, type: int32}
+      - {name: confidence, type: float32}
+    result:
+      - {name: success, type: bool}
+      - {name: final_pose, type: geometry_msgs/PoseWithCovarianceStamped}
+      - {name: num_inliers, type: int32}
+
+# ============================================================================
+# VALIDATION RULES
+# ============================================================================
+
+validation:
+  stereo_synchronization:
+    topics: ["/isaac_ros_vslam/visual_slam/image_0", "/isaac_ros_vslam/visual_slam/image_1"]
+    max_time_delta: 0.001             # 1ms max desync for stereo
+
+  camera_calibration:
+    - field: sensor_msgs/CameraInfo.K
+      constraint: "K[0] > 0 && K[4] > 0"  # Valid fx, fy
+    - field: sensor_msgs/CameraInfo.distortion_model
+      valid_values: ["plumb_bob", "rational_polynomial", "equidistant"]
+
+  odometry_output:
+    topic: "/isaac_ros_vslam/visual_slam/tracking/odometry"
+    min_hz: 25                        # Must maintain near-realtime
+    max_hz: 65
+
+  tracking_health:
+    topic: "/isaac_ros_vslam/visual_slam/status"
+    checks:
+      - {field: tracking_status, valid_values: [1, 2]}  # Not Lost
+      - {field: num_keyframes, min: 10}  # Sufficient map
+      - {field: tracking_frame_rate, min: 25}  # Realtime
+
+# ============================================================================
+# PERFORMANCE BENCHMARKS
+# ============================================================================
+
+performance:
+  gpu_tiers:
+    minimal:
+      hardware: "GTX 1660 Ti (6GB VRAM)"
+      frame_rate: 15-20  # Hz
+      resolution: [640, 480]
+    recommended:
+      hardware: "RTX 3060 (12GB VRAM)"
+      frame_rate: 30-60  # Hz
+      resolution: [1280, 720]
+    optimal:
+      hardware: "RTX 4070+ (12GB+ VRAM)"
+      frame_rate: 60+  # Hz
+      resolution: [1920, 1080]
+    jetson:
+      hardware: "Jetson Orin Nano (8GB)"
+      frame_rate: 20-25  # Hz
+      resolution: [848, 480]
+
+  latency_targets:
+    tracking_latency: 20  # ms (50 Hz)
+    loop_closure_latency: 1000  # ms (1 Hz checks)
+    relocalization_latency: 5000  # ms (5 sec timeout)
+
+# ============================================================================
+# EXAMPLE USAGE (Python)
+# ============================================================================
+
+example_code: |
+  import rclpy
+  from rclpy.node import Node
+  from nav_msgs.msg import Odometry
+  from isaac_ros_visual_slam_interfaces.srv import Reset, FilePath
+
+  class VSLAMNode(Node):
+      def __init__(self):
+          super().__init__('vslam_client')
+
+          # Subscribe to odometry
+          self.odom_sub = self.create_subscription(
+              Odometry,
+              '/isaac_ros_vslam/visual_slam/tracking/odometry',
+              self.odom_callback,
+              10
+          )
+
+          # Service clients
+          self.reset_client = self.create_client(
+              Reset,
+              '/isaac_ros_vslam/visual_slam/reset'
+          )
+          self.save_client = self.create_client(
+              FilePath,
+              '/isaac_ros_vslam/visual_slam/save_map'
+          )
+
+      def odom_callback(self, msg):
+          pos = msg.pose.pose.position
+          self.get_logger().info(f'Pose: ({pos.x:.2f}, {pos.y:.2f}, {pos.z:.2f})')
+
+      def reset_vslam(self):
+          request = Reset.Request()
+          request.reset_map = True
+          request.reset_localization = True
+
+          future = self.reset_client.call_async(request)
+          rclpy.spin_until_future_complete(self, future)
+
+          if future.result().success:
+              self.get_logger().info('VSLAM reset successful')
+
+      def save_map(self, path):
+          request = FilePath.Request()
+          request.file_path = path
+
+          future = self.save_client.call_async(request)
+          rclpy.spin_until_future_complete(self, future)
+
+          if future.result().success:
+              self.get_logger().info(f'Map saved to {path}')
+
+# ============================================================================
+# TF TREE STRUCTURE
+# ============================================================================
+
+tf_tree: |
+  map
+   └─ odom
+       └─ base_link
+           ├─ camera_left
+           └─ camera_right
+
+  Transforms published by cuVSLAM:
+  - map -> odom (corrected by loop closure)
+  - odom -> base_link (visual odometry)
+
+# ============================================================================
+# INTEGRATION WITH NAV2
+# ============================================================================
+
+nav2_integration:
+  localization_source: "/isaac_ros_vslam/visual_slam/tracking/odometry"
+  costmap_frame: "odom"
+  global_frame: "map"
+  robot_frame: "base_link"
+
+  notes: |
+    - VSLAM provides odometry to Nav2's AMCL or as direct localization source
+    - Loop closure corrections update map->odom transform
+    - Landmarks can be converted to costmap obstacles (optional)

@@ -1,0 +1,195 @@
+<?xml version="1.0"?>
+<!--
+  3-DOF (3 Degree of Freedom) Articulated Robot Arm URDF
+
+  Learning objectives:
+  - Multi-joint articulated robots with revolute joints
+  - Joint limits (position, velocity, effort)
+  - Understanding joint cascades and forward kinematics
+  - Gravity compensation (heavy links require strong motors)
+-->
+<robot name="3dof_arm">
+
+  <!-- Base Link (fixed to ground) -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.15" length="0.1"/>  <!-- 15cm radius, 10cm height -->
+      </geometry>
+      <material name="dark_gray">
+        <color rgba="0.3 0.3 0.3 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <geometry>
+        <cylinder radius="0.15" length="0.1"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <mass value="5.0"/>  <!-- 5 kg heavy base for stability -->
+      <!-- Solid cylinder inertia (r=0.15, h=0.1):
+           Ixx = Iyy = (1/12)*m*(3*r² + h²) = (1/12)*5*(3*0.15² + 0.1²) = 0.0365
+           Izz = (1/2)*m*r² = (1/2)*5*0.15² = 0.05625 -->
+      <inertia ixx="0.0365" ixy="0.0" ixz="0.0"
+               iyy="0.0365" iyz="0.0"
+               izz="0.05625"/>
+    </inertial>
+  </link>
+
+  <!-- Link 1 (Shoulder) -->
+  <link name="link1">
+    <visual>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>  <!-- Center visual at midpoint -->
+      <geometry>
+        <box size="0.1 0.1 0.5"/>  <!-- 10x10x50cm arm segment -->
+      </geometry>
+      <material name="red">
+        <color rgba="0.8 0.2 0.2 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.1 0.1 0.5"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0.25" rpy="0 0 0"/>  <!-- COM at center of mass -->
+      <mass value="2.0"/>  <!-- 2 kg arm segment -->
+      <!-- Cuboid inertia for 10x10x50cm, 2kg:
+           Ixx = (1/12)*2*(0.1² + 0.5²) = 0.043
+           Iyy = (1/12)*2*(0.1² + 0.5²) = 0.043
+           Izz = (1/12)*2*(0.1² + 0.1²) = 0.0033 -->
+      <inertia ixx="0.043" ixy="0.0" ixz="0.0"
+               iyy="0.043" iyz="0.0"
+               izz="0.0033"/>
+    </inertial>
+  </link>
+
+  <!-- Link 2 (Elbow) -->
+  <link name="link2">
+    <visual>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.08 0.08 0.4"/>  <!-- 8x8x40cm arm segment (slightly smaller) -->
+      </geometry>
+      <material name="green">
+        <color rgba="0.2 0.8 0.2 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.08 0.08 0.4"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <mass value="1.5"/>  <!-- 1.5 kg -->
+      <!-- Cuboid inertia for 8x8x40cm, 1.5kg:
+           Ixx = (1/12)*1.5*(0.08² + 0.4²) = 0.0208
+           Iyy = (1/12)*1.5*(0.08² + 0.4²) = 0.0208
+           Izz = (1/12)*1.5*(0.08² + 0.08²) = 0.0016 -->
+      <inertia ixx="0.0208" ixy="0.0" ixz="0.0"
+               iyy="0.0208" iyz="0.0"
+               izz="0.0016"/>
+    </inertial>
+  </link>
+
+  <!-- Link 3 (Wrist/End-Effector) -->
+  <link name="link3">
+    <visual>
+      <origin xyz="0 0 0.1" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.06 0.06 0.2"/>  <!-- 6x6x20cm end-effector -->
+      </geometry>
+      <material name="blue">
+        <color rgba="0.2 0.4 0.8 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0.1" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.06 0.06 0.2"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <origin xyz="0 0 0.1" rpy="0 0 0"/>
+      <mass value="0.5"/>  <!-- 500g end-effector -->
+      <!-- Cuboid inertia for 6x6x20cm, 0.5kg:
+           Ixx = (1/12)*0.5*(0.06² + 0.2²) = 0.00185
+           Iyy = (1/12)*0.5*(0.06² + 0.2²) = 0.00185
+           Izz = (1/12)*0.5*(0.06² + 0.06²) = 0.0003 -->
+      <inertia ixx="0.00185" ixy="0.0" ixz="0.0"
+               iyy="0.00185" iyz="0.0"
+               izz="0.0003"/>
+    </inertial>
+  </link>
+
+  <!-- Joint 1: Base to Shoulder (Revolute - rotates around Z) -->
+  <joint name="joint1" type="revolute">
+    <parent link="base_link"/>
+    <child link="link1"/>
+    <origin xyz="0 0 0.05" rpy="0 0 0"/>  <!-- Shoulder starts at top of base -->
+    <axis xyz="0 0 1"/>  <!-- Rotate around Z-axis (vertical) -->
+    <limit lower="-3.14" upper="3.14" effort="50.0" velocity="2.0"/>  <!-- ±180°, 50 Nm, 2 rad/s -->
+    <dynamics damping="1.0" friction="0.5"/>
+  </joint>
+
+  <!-- Joint 2: Shoulder to Elbow (Revolute - rotates around Y) -->
+  <joint name="joint2" type="revolute">
+    <parent link="link1"/>
+    <child link="link2"/>
+    <origin xyz="0 0 0.5" rpy="0 0 0"/>  <!-- Elbow at end of shoulder link -->
+    <axis xyz="0 1 0"/>  <!-- Rotate around Y-axis (pitch) -->
+    <limit lower="-1.57" upper="1.57" effort="30.0" velocity="1.5"/>  <!-- ±90°, 30 Nm, 1.5 rad/s -->
+    <dynamics damping="0.7" friction="0.3"/>
+  </joint>
+
+  <!-- Joint 3: Elbow to Wrist (Revolute - rotates around Y) -->
+  <joint name="joint3" type="revolute">
+    <parent link="link2"/>
+    <child link="link3"/>
+    <origin xyz="0 0 0.4" rpy="0 0 0"/>  <!-- Wrist at end of elbow link -->
+    <axis xyz="0 1 0"/>  <!-- Rotate around Y-axis (pitch) -->
+    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="2.0"/>  <!-- ±90°, 10 Nm, 2 rad/s -->
+    <dynamics damping="0.5" friction="0.2"/>
+  </joint>
+
+  <!-- Gazebo Joint Controllers (Position control for each joint) -->
+  <gazebo>
+    <plugin name="gazebo_ros_joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
+      <update_rate>50.0</update_rate>
+      <joint_name>joint1</joint_name>
+      <joint_name>joint2</joint_name>
+      <joint_name>joint3</joint_name>
+    </plugin>
+
+    <plugin name="gazebo_ros_joint_pose_trajectory" filename="libgazebo_ros_joint_pose_trajectory.so">
+      <update_rate>50.0</update_rate>
+    </plugin>
+  </gazebo>
+
+  <!-- Gazebo materials -->
+  <gazebo reference="base_link">
+    <material>Gazebo/DarkGray</material>
+  </gazebo>
+  <gazebo reference="link1">
+    <material>Gazebo/Red</material>
+  </gazebo>
+  <gazebo reference="link2">
+    <material>Gazebo/Green</material>
+  </gazebo>
+  <gazebo reference="link3">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+
+</robot>

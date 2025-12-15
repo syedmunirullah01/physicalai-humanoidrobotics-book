@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>PACKAGE_NAME</name>
+  <version>0.1.0</version>
+  <description>ROS 2 package for Physical AI & Humanoid Robotics textbook - Module 1</description>
+  <maintainer email="textbook@example.com">Physical AI Textbook</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- Build tool dependency -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <!-- Core ROS 2 dependencies -->
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+
+  <!-- Additional dependencies (uncomment as needed) -->
+  <!-- <depend>geometry_msgs</depend> -->
+  <!-- <depend>sensor_msgs</depend> -->
+  <!-- <depend>tf2_ros</depend> -->
+  <!-- <depend>robot_state_publisher</depend> -->
+  <!-- <depend>joint_state_publisher</depend> -->
+
+  <!-- Testing dependencies -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

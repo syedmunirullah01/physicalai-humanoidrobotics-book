@@ -1,0 +1,213 @@
+# Camera Calibration Parameters for Isaac ROS VSLAM
+# Chapter 2: Isaac ROS VSLAM - Stereo Camera Calibration
+
+# Stereo camera configuration for VSLAM
+stereo_camera:
+  # Left camera calibration
+  left_camera:
+    # Camera name
+    camera_name: "left_camera"
+
+    # Image dimensions
+    image_width: 848
+    image_height: 480
+
+    # Camera calibration matrix (3x3)
+    camera_matrix:
+      rows: 3
+      cols: 3
+      data: [426.67, 0.0, 424.0,    # fx, 0, cx
+             0.0, 426.67, 240.0,    # 0, fy, cy
+             0.0, 0.0, 1.0]         # 0, 0, 1
+
+    # Distortion coefficients (5 parameters: k1, k2, p1, p2, k3)
+    distortion_coefficients:
+      rows: 1
+      cols: 5
+      data: [0.0, 0.0, 0.0, 0.0, 0.0]  # No distortion (rectified)
+
+    # Rectification matrix (3x3) - identity for rectified images
+    rectification_matrix:
+      rows: 3
+      cols: 3
+      data: [1.0, 0.0, 0.0,
+             0.0, 1.0, 0.0,
+             0.0, 0.0, 1.0]
+
+    # Projection matrix (3x4) - used for stereo rectification
+    projection_matrix:
+      rows: 3
+      cols: 4
+      data: [426.67, 0.0, 424.0, 0.0,     # [K|0]
+             0.0, 426.67, 240.0, 0.0,
+             0.0, 0.0, 1.0, 0.0]
+
+    # Transformation from camera to robot base frame
+    transformation:
+      translation: [0.0, 0.06, 0.0]  # 6cm right of center (for stereo baseline)
+      rotation: [0.0, 0.0, 0.0, 1.0]  # [x, y, z, w] quaternion (identity)
+
+  # Right camera calibration
+  right_camera:
+    # Camera name
+    camera_name: "right_camera"
+
+    # Image dimensions (should match left camera)
+    image_width: 848
+    image_height: 480
+
+    # Camera calibration matrix (should match left camera for stereo)
+    camera_matrix:
+      rows: 3
+      cols: 3
+      data: [426.67, 0.0, 424.0,    # fx, 0, cx
+             0.0, 426.67, 240.0,    # 0, fy, cy
+             0.0, 0.0, 1.0]         # 0, 0, 1
+
+    # Distortion coefficients (should match left camera for stereo)
+    distortion_coefficients:
+      rows: 1
+      cols: 5
+      data: [0.0, 0.0, 0.0, 0.0, 0.0]  # No distortion (rectified)
+
+    # Rectification matrix (should match left camera for stereo)
+    rectification_matrix:
+      rows: 3
+      cols: 3
+      data: [1.0, 0.0, 0.0,
+             0.0, 1.0, 0.0,
+             0.0, 0.0, 1.0]
+
+    # Projection matrix for stereo - includes baseline
+    projection_matrix:
+      rows: 3
+      cols: 4
+      data: [426.67, 0.0, 424.0, -51.2,    # -fx * baseline (baseline = 0.12m)
+             0.0, 426.67, 240.0, 0.0,
+             0.0, 0.0, 1.0, 0.0]
+
+    # Transformation from right camera to robot base frame
+    transformation:
+      translation: [0.0, -0.06, 0.0]  # 6cm left of center (for stereo baseline)
+      rotation: [0.0, 0.0, 0.0, 1.0]  # [x, y, z, w] quaternion (identity)
+
+  # Stereo-specific parameters
+  stereo_parameters:
+    # Stereo baseline (distance between left and right camera centers) in meters
+    baseline: 0.120  # 120mm baseline
+
+    # Horizontal focal length (should be same for both cameras)
+    horizontal_focal_length: 426.67  # pixels
+
+    # Vertical focal length (should be same for both cameras)
+    vertical_focal_length: 426.67    # pixels
+
+    # Principal point offset between cameras (should be 0 for properly calibrated stereo)
+    principal_point_offset: 0.0
+
+    # Rectification parameters
+    rectification:
+      # Enable stereo rectification
+      enable_rectification: true
+
+      # Alpha parameter for rectification (0 = crop image, 1 = keep full image)
+      rectification_alpha: 0.0
+
+      # ROI for rectified images
+      roi_left: [0, 0, 848, 480]  # [x, y, width, height]
+      roi_right: [0, 0, 848, 480] # [x, y, width, height]
+
+# Calibration metadata
+calibration_info:
+  # Calibration date
+  date: "2025-12-14"
+
+  # Calibration method
+  method: "stereo_calibrate_opencv"
+
+  # Calibration target used
+  target:
+    type: "chessboard"
+    rows: 6
+    columns: 9
+    square_size: 0.025  # 25mm squares
+
+  # Number of images used for calibration
+  num_images: 30
+
+  # Calibration reprojection error (should be < 1.0 pixel for good calibration)
+  reprojection_error: 0.15
+
+  # Calibration software
+  software: "OpenCV 4.8.0"
+  version: "4.8.0"
+
+# Camera intrinsics for VSLAM
+vslam_intrinsics:
+  # Field of view in degrees (horizontal)
+  fov_horizontal: 90.0
+
+  # Field of view in degrees (vertical)
+  fov_vertical: 60.0
+
+  # Pixel size in meters (for converting pixels to meters)
+  pixel_size: 0.00000586  # 5.86 micrometers (for 848px width, 4.96mm sensor width)
+
+  # Sensor size in meters
+  sensor_size:
+    width: 0.00496  # 4.96mm
+    height: 0.00294  # 2.94mm
+
+# Recommended settings for Isaac ROS VSLAM
+isaac_ros_recommendations:
+  # Image resolution recommendations
+  recommended_resolutions:
+    - [848, 480]   # Good for VSLAM (30+ Hz on RTX 3060)
+    - [640, 480]   # Lower resolution for constrained systems
+    - [1280, 720]  # Higher resolution for detailed mapping (may impact frame rate)
+
+  # Stereo baseline recommendations
+  baseline_guidelines:
+    # Indoor environments: 10-20cm
+    indoor_baseline_range: [0.10, 0.20]
+    # Outdoor environments: 15-30cm
+    outdoor_baseline_range: [0.15, 0.30]
+    # Recommended for VSLAM: 12cm
+    recommended_baseline: 0.12
+
+  # Feature detection recommendations
+  feature_detection:
+    # Minimum number of features for stable tracking
+    min_features_for_tracking: 50
+    # Recommended number of features for optimal performance
+    recommended_features: 1000
+    # Maximum number of features to detect
+    max_features: 2000
+
+# Validation checks for calibration quality
+validation:
+  # Check that focal lengths are reasonable (based on FOV and resolution)
+  check_focal_length_reasonable: true
+
+  # Check that principal point is near image center
+  check_principal_point_near_center: true
+
+  # Check that distortion coefficients are small (for rectified images)
+  check_distortion_small: true
+
+  # Check that stereo baseline is positive and reasonable
+  check_baseline_reasonable: true
+
+  # Expected validation results
+  expected_results:
+    focal_length_range: [300, 600]  # For 848x480 with ~90deg FOV
+    principal_point_tolerance: 20.0  # Pixels from center
+    distortion_tolerance: 0.1  # Maximum distortion coefficient
+    baseline_range: [0.05, 0.5]  # 5cm to 50cm
+
+# ROS 2 topic names for camera calibration
+ros2_topics:
+  left_camera_info: "/camera/left/camera_info"
+  right_camera_info: "/camera/right/camera_info"
+  left_image_rect: "/camera/left/image_rect"
+  right_image_rect: "/camera/right/image_rect"

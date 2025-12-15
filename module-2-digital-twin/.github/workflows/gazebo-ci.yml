@@ -1,0 +1,168 @@
+name: Gazebo Physics CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/ch1_gazebo_physics/**'
+      - 'src/ch3_sensor_simulation/**'
+      - 'tests/**'
+      - '.github/workflows/gazebo-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/ch1_gazebo_physics/**'
+      - 'src/ch3_sensor_simulation/**'
+      - 'tests/**'
+      - '.github/workflows/gazebo-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        ros_distro: [humble]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ROS 2 ${{ matrix.ros_distro }}
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: ${{ matrix.ros_distro }}
+
+      - name: Install Gazebo Harmonic
+        run: |
+          sudo wget https://packages.osrfoundation.org/gazebo.gpg -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y gz-harmonic
+
+      - name: Install ROS 2 dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ros-${{ matrix.ros_distro }}-ros-gz \
+            ros-${{ matrix.ros_distro }}-gazebo-ros-pkgs \
+            ros-${{ matrix.ros_distro }}-robot-state-publisher \
+            ros-${{ matrix.ros_distro }}-joint-state-publisher \
+            ros-${{ matrix.ros_distro }}-xacro \
+            python3-pytest \
+            python3-pytest-cov
+
+      - name: Build workspace
+        run: |
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+          colcon build --packages-select ch1_gazebo_physics ch3_sensor_simulation
+
+      - name: Run tests
+        run: |
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+          source install/setup.bash
+          colcon test --packages-select ch1_gazebo_physics ch3_sensor_simulation --event-handlers console_direct+
+
+      - name: Test results
+        if: always()
+        run: |
+          colcon test-result --verbose
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.ros_distro }}
+          path: |
+            build/*/test_results/**/*.xml
+            log/latest_test/**
+
+      - name: Code coverage
+        if: success()
+        run: |
+          sudo apt-get install -y lcov
+          lcov --directory build --capture --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' '/opt/*' '*/test/*' --output-file coverage.info
+          lcov --list coverage.info
+
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.info
+          flags: gazebo
+          name: gazebo-coverage
+
+  urdf-validation:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup ROS 2
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: humble
+
+      - name: Install URDF validators
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ros-humble-urdf \
+            ros-humble-xacro \
+            liburdfdom-tools
+
+      - name: Validate URDF files
+        run: |
+          source /opt/ros/humble/setup.bash
+          echo "Validating URDF files..."
+          for urdf_file in src/ch1_gazebo_physics/urdf/*.urdf; do
+            echo "Checking $urdf_file"
+            check_urdf "$urdf_file"
+          done
+
+      - name: Test URDF parsing
+        run: |
+          source /opt/ros/humble/setup.bash
+          python3 -c "
+          import sys
+          from urdf_parser_py.urdf import URDF
+          urdf_files = [
+              'src/ch1_gazebo_physics/urdf/rigid_body.urdf',
+              'src/ch1_gazebo_physics/urdf/diff_drive_robot.urdf',
+              'src/ch1_gazebo_physics/urdf/3dof_arm.urdf',
+              'src/ch1_gazebo_physics/urdf/integration_humanoid.urdf'
+          ]
+          for urdf_file in urdf_files:
+              print(f'Parsing {urdf_file}...')
+              try:
+                  robot = URDF.from_xml_file(urdf_file)
+                  print(f'  ✓ {robot.name}: {len(robot.links)} links, {len(robot.joints)} joints')
+              except Exception as e:
+                  print(f'  ✗ Failed: {e}')
+                  sys.exit(1)
+          "
+
+  launch-file-syntax:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Check Python syntax
+        run: |
+          python3 -m py_compile src/ch1_gazebo_physics/launch/*.py
+          python3 -m py_compile src/ch3_sensor_simulation/launch/*.py
+
+      - name: Lint launch files
+        run: |
+          pip install flake8
+          flake8 src/ch1_gazebo_physics/launch/ --max-line-length=120
+          flake8 src/ch3_sensor_simulation/launch/ --max-line-length=120

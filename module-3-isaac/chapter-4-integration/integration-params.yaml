@@ -1,0 +1,217 @@
+# Isaac ROS Integration Parameters
+# Chapter 4: Integration and Advanced Topics
+
+integration_monitor:
+  ros__parameters:
+    use_sim_time: True
+    monitoring_frequency: 10.0  # Hz
+    safety_check_frequency: 50.0  # Hz
+    performance_thresholds:
+      vslam_min_fps: 30.0
+      nav2_max_plan_time: 0.1  # seconds
+      system_latency_max: 0.05  # seconds
+    safety_limits:
+      max_linear_velocity: 0.5  # m/s
+      max_angular_velocity: 0.5  # rad/s
+      min_obstacle_distance: 0.3  # m
+      max_tracking_loss_duration: 5.0  # seconds
+    integration_states:
+      vslam_tracking_confidence_threshold: 0.7
+      nav2_path_validity_threshold: 0.8
+      system_health_check_interval: 1.0  # seconds
+    logging:
+      enable_detailed_logging: True
+      log_level: "INFO"
+      enable_performance_logging: True
+
+system_coordinator:
+  ros__parameters:
+    use_sim_time: True
+    coordination_frequency: 30.0  # Hz
+    module_dependencies:
+      - name: "vslam"
+        required: True
+        timeout: 10.0  # seconds
+      - name: "nav2"
+        required: True
+        timeout: 10.0  # seconds
+      - name: "sensors"
+        required: True
+        timeout: 5.0  # seconds
+    resource_management:
+      enable_gpu_sharing: True
+      gpu_memory_fraction: 0.8
+      enable_cpu_affinity: True
+      cpu_affinity_mask: "0-7"  # Use first 8 CPU cores
+      enable_memory_pools: True
+      memory_pool_size: 67108864  # 64 MB
+    timing_synchronization:
+      enable_timestamp_synchronization: True
+      max_timestamp_offset: 0.1  # seconds
+      enable_frame_rate_matching: True
+      target_frame_rate: 30.0  # Hz
+    error_handling:
+      enable_automatic_recovery: True
+      max_recovery_attempts: 3
+      recovery_delay: 1.0  # seconds
+      enable_fallback_behaviors: True
+
+safety_manager:
+  ros__parameters:
+    use_sim_time: True
+    safety_check_frequency: 100.0  # Hz (higher frequency for safety)
+    emergency_stop:
+      enable_emergency_stop: True
+      emergency_stop_topic: "/cmd_vel"
+      emergency_stop_message: {"linear": {"x": 0.0}, "angular": {"z": 0.0}}
+      emergency_stop_timeout: 0.1  # seconds
+    safety_zones:
+      enable_proximity_safety: True
+      safety_zone_radius: 0.5  # meters
+      enable_authorized_zone: True
+      authorized_zone_enabled: False
+      authorized_zone_vertices: []
+    collision_avoidance:
+      enable_collision_prediction: True
+      prediction_horizon: 2.0  # seconds
+      minimum_safe_distance: 0.3  # meters
+      enable_velocity_scaling: True
+      velocity_scale_factor: 0.5
+    human_safety:
+      enable_human_detection: True
+      human_detection_topic: "/detections"
+      minimum_human_distance: 1.0  # meters
+      enable_human_avoidance: True
+    system_safety:
+      enable_sensor_health_check: True
+      enable_communication_check: True
+      enable_power_monitoring: True
+      critical_systems:
+        - "vslam"
+        - "nav2"
+        - "sensors"
+        - "communications"
+      system_health_threshold: 0.8
+    logging:
+      enable_safety_logging: True
+      safety_log_level: "WARN"
+      enable_safety_statistics: True
+
+tf_manager:
+  ros__parameters:
+    use_sim_time: True
+    tf_publish_frequency: 50.0  # Hz
+    tf_buffer_size: 10  # seconds
+    tf_timeout: 0.1  # seconds
+    tf_validation:
+      enable_tf_validation: True
+      validate_transforms: True
+      max_transform_delay: 0.5  # seconds
+      enable_circular_transform_detection: True
+    tf_optimization:
+      enable_tf_compression: True
+      tf_compression_ratio: 0.1
+      enable_interpolation: True
+      interpolation_max_interval: 0.1  # seconds
+
+data_synchronizer:
+  ros__parameters:
+    use_sim_time: True
+    synchronization_method: "exact_time"  # Options: exact_time, approximate_time
+    synchronization_queue_size: 10
+    message_filter_timeout: 0.1  # seconds
+    enable_timestamp_validation: True
+    max_timestamp_difference: 0.05  # seconds
+    data_buffer_size: 100
+    enable_data_compression: True
+    compression_level: 6
+
+performance_monitor:
+  ros__parameters:
+    use_sim_time: True
+    monitoring_frequency: 10.0  # Hz
+    metrics_collection:
+      enable_cpu_monitoring: True
+      enable_gpu_monitoring: True
+      enable_memory_monitoring: True
+      enable_network_monitoring: True
+      enable_disk_monitoring: True
+    performance_thresholds:
+      cpu_usage_warning: 80.0  # percent
+      cpu_usage_critical: 95.0  # percent
+      gpu_usage_warning: 85.0  # percent
+      gpu_usage_critical: 95.0  # percent
+      memory_usage_warning: 80.0  # percent
+      memory_usage_critical: 90.0  # percent
+      disk_usage_warning: 85.0  # percent
+      disk_usage_critical: 95.0  # percent
+    reporting:
+      enable_metrics_publishing: True
+      metrics_topic: "/system_metrics"
+      enable_alerts: True
+      alert_topic: "/system_alerts"
+      enable_logging: True
+
+communication_manager:
+  ros__parameters:
+    use_sim_time: True
+    qos_settings:
+      sensor_data_qos:
+        reliability: "reliable"
+        durability: "volatile"
+        history: "keep_last"
+        depth: 10
+      navigation_data_qos:
+        reliability: "reliable"
+        durability: "volatile"
+        history: "keep_last"
+        depth: 5
+      visualization_data_qos:
+        reliability: "best_effort"
+        durability: "volatile"
+        history: "keep_last"
+        depth: 5
+    bandwidth_management:
+      enable_bandwidth_limiting: False
+      max_bandwidth: 100  # Mbps
+      enable_qos_shaping: False
+      qos_shaping_rate: 50  # Mbps
+    network_health:
+      enable_network_monitoring: True
+      network_health_check_interval: 1.0  # seconds
+      enable_connection_recovery: True
+      connection_recovery_timeout: 5.0  # seconds
+
+isaac_ros:
+  ros__parameters:
+    # Integration-specific parameters
+    integration_mode: "full"  # Options: minimal, standard, full
+    enable_hardware_acceleration: True
+    hardware_acceleration_type: "cuda"  # Options: cuda, tensorrt, none
+    cuda_device_id: 0
+    enable_multi_gpu: False
+    multi_gpu_mode: "single"  # Options: single, distributed, mixed
+
+    # Performance optimization
+    enable_async_processing: True
+    async_queue_size: 3
+    enable_memory_pooling: True
+    memory_pool_size: 67108864  # 64 MB
+    enable_tensor_cache: True
+    tensor_cache_size: 100
+
+    # Safety and reliability
+    enable_safety_systems: True
+    safety_system_priority: 100
+    enable_fault_tolerance: True
+    fault_tolerance_level: "high"
+    enable_watchdog: True
+    watchdog_timeout: 5.0  # seconds
+
+    # Logging and diagnostics
+    enable_detailed_diagnostics: True
+    diagnostic_frequency: 1.0  # Hz
+    enable_system_profiling: True
+    profiling_frequency: 10.0  # Hz
+    enable_data_logging: True
+    log_retention_days: 7

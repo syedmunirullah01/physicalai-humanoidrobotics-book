@@ -1,0 +1,117 @@
+# Domain Randomization Configuration - Tier 1
+# Basic randomization: lighting and textures only
+
+domain_randomization:
+  tier: 1
+  description: "Basic domain randomization - lighting and texture variations"
+  enabled: true
+
+lighting:
+  # Randomize lighting intensity and color
+  intensity_variance: 0.4      # ±40% from base intensity
+  color_temp_variance: 2000    # ±2000K from base color temperature (typically 5500K)
+  num_variants: 5              # Number of different lighting setups to cycle through
+  dynamic_lights: false        # Whether to use moving/dynamic lights
+  min_intensity: 3000          # Minimum light intensity (lumens)
+  max_intensity: 15000         # Maximum light intensity (lumens)
+  base_color_temp: 5500        # Base color temperature in Kelvin
+
+  # Lighting pattern variations
+  patterns:
+    - type: "directional"      # Directional light (sun-like)
+      intensity_range: [5000, 12000]
+      color_temp_range: [4000, 7000]
+    - type: "point"            # Point lights (lamps)
+      intensity_range: [2000, 8000]
+      color_temp_range: [3000, 6500]
+    - type: "area"             # Area lights (overhead panels)
+      intensity_range: [6000, 15000]
+      color_temp_range: [5000, 8000]
+
+textures:
+  # Randomize material textures and appearances
+  material_randomization: true
+  num_variants: 8              # Number of texture variants per material type
+  variation_intensity: 0.3     # How much variation in texture properties (0-1)
+  texture_blending: false      # Whether to blend multiple textures
+
+  # Material property ranges
+  material_properties:
+    roughness_range: [0.1, 0.9]    # 0.0 = mirror, 1.0 = matte
+    metallic_range: [0.0, 0.3]     # 0.0 = non-metallic, 1.0 = metallic
+    specular_range: [0.1, 0.5]     # Specular reflection intensity
+    albedo_variance: 0.2           # Color variation multiplier
+
+  # Texture library configuration
+  texture_library:
+    floor:
+      - "concrete_01"
+      - "concrete_02"
+      - "concrete_03"
+      - "tile_01"
+      - "tile_02"
+      - "wood_01"
+    walls:
+      - "cement_wall_01"
+      - "cement_wall_02"
+      - "brick_wall_01"
+      - "metal_wall_01"
+    objects:
+      - "cardboard_box_01"
+      - "cardboard_box_02"
+      - "metal_surface_01"
+      - "plastic_surface_01"
+
+objects:
+  # Static object configurations (no movement for Tier 1)
+  static_only: true
+  position_jitter: 0.0         # No position jitter in Tier 1
+  rotation_jitter: 0.0         # No rotation jitter in Tier 1
+  random_removal_prob: 0.0     # No object removal in Tier 1
+
+  # Object appearance randomization
+  appearance:
+    color_variance: 0.15       # ±15% color variation
+    texture_switching: true    # Switch between texture variants
+    wear_simulation: false     # No wear and tear simulation in Tier 1
+
+camera:
+  # Camera settings (minimal randomization in Tier 1)
+  noise_sigma: 0.0            # No additional noise in Tier 1
+  exposure_randomization: false  # No exposure randomization in Tier 1
+  focus_randomization: false     # No focus randomization in Tier 1
+
+environment:
+  # Environmental conditions (minimal in Tier 1)
+  weather_effects: false       # No weather effects in Tier 1
+  atmospheric_scattering: false # No atmospheric effects in Tier 1
+  fog_enabled: false          # No fog in Tier 1
+
+performance:
+  # Performance impact settings
+  max_performance_impact: 10.0  # Maximum acceptable performance impact (%)
+  validation_frequency: 50      # Validate performance every N frames
+  adaptive_randomization: true  # Adjust randomization based on performance
+
+quality_control:
+  # Quality assurance for randomization
+  min_texture_quality: 0.7     # Minimum acceptable texture quality (0-1)
+  max_light_bleeding: 0.1      # Maximum acceptable light bleeding (0-1)
+  shadow_quality_threshold: 0.8 # Minimum shadow quality (0-1)
+
+logging:
+  # Logging configuration for debugging
+  enable_logging: true
+  log_level: "INFO"
+  log_file: "randomization_tier1.log"
+  log_statistics: true         # Log randomization statistics
+
+validation:
+  # Validation parameters for Tier 1
+  target_diversity_score: 0.6  # Target diversity score (0-1)
+  min_visual_difference: 0.1   # Minimum visual difference between variants (0-1)
+  consistency_checks: true     # Perform consistency checks
+  validation_metrics:
+    - "texture_diversity"
+    - "lighting_variation"
+    - "color_distribution"

@@ -1,0 +1,600 @@
+# Nav2 Navigation Contract (Bipedal Extensions)
+# ROS 2 actions, topics, and services for bipedal path planning (Chapter 3)
+
+version: "1.0.0"
+namespace: /navigation
+framework: ROS 2 Humble/Jazzy
+package: nav2_bringup + custom_footstep_planner
+
+# ============================================================================
+# ACTIONS - Navigation Goals
+# ============================================================================
+
+actions:
+  # Main navigation action
+  /navigate_to_pose:
+    action_type: nav2_msgs/NavigateToPose
+    description: Navigate robot to goal pose using bipedal footstep planning
+    goal:
+      pose:
+        header:
+          stamp: builtin_interfaces/Time
+          frame_id: string            # Typically "map"
+        pose:
+          position: geometry_msgs/Point
+          orientation: geometry_msgs/Quaternion
+      behavior_tree: string           # Optional custom BT XML
+    feedback:
+      current_pose: geometry_msgs/PoseStamped
+      navigation_time: builtin_interfaces/Duration
+      estimated_time_remaining: builtin_interfaces/Duration
+      number_of_recoveries: int16
+      distance_remaining: float32
+      number_of_replans: int16
+      current_footstep: int32         # Custom: current step in plan
+      total_footsteps: int32          # Custom: total steps in plan
+      stability_margin: float32       # Custom: current ZMP margin
+    result:
+      result: int8                    # 0=Unknown, 1=Succeeded, 2=Failed, 3=Aborted
+      error_code: int16               # Detailed error code
+      final_pose: geometry_msgs/PoseStamped
+      total_elapsed_time: builtin_interfaces/Duration
+
+  # Compute path only (no execution)
+  /compute_path_to_pose:
+    action_type: nav2_msgs/ComputePathToPose
+    description: Compute bipedal footstep plan without executing
+    goal:
+      goal: geometry_msgs/PoseStamped
+      use_start: bool                 # Use explicit start pose
+      start: geometry_msgs/PoseStamped
+      planner_id: string              # "GridBased", "FootstepPlanner", etc.
+    feedback:
+      planning_time: builtin_interfaces/Duration
+    result:
+      path: nav_msgs/Path
+      footstep_plan: custom_msgs/FootstepPlan  # Custom message
+      planning_time: builtin_interfaces/Duration
+      error_code: int16
+
+  # Follow computed path
+  /follow_path:
+    action_type: nav2_msgs/FollowPath
+    description: Execute pre-computed footstep plan
+    goal:
+      path: nav_msgs/Path
+      controller_id: string           # "FollowPath", "BipedController"
+      goal_checker_id: string
+    feedback:
+      distance_to_goal: float32
+      speed: float32
+      current_footstep: int32         # Custom
+      stability_margin: float32       # Custom
+    result:
+      result: int8
+      error_code: int16
+      total_elapsed_time: builtin_interfaces/Duration
+
+  # Recovery behaviors
+  /spin:
+    action_type: nav2_msgs/Spin
+    description: Rotate in place for bipedal robot
+    goal:
+      target_yaw: float32             # Radians
+      time_allowance: builtin_interfaces/Duration
+    feedback:
+      angular_distance_traveled: float32
+    result:
+      result: int8
+      total_elapsed_time: builtin_interfaces/Duration
+
+  /backup:
+    action_type: nav2_msgs/BackUp
+    description: Back up by specific distance (careful with bipeds!)
+    goal:
+      target:
+        x: float32                    # Meters
+        y: float32
+        z: float32
+      speed: float32
+      time_allowance: builtin_interfaces/Duration
+    feedback:
+      distance_traveled: float32
+    result:
+      result: int8
+      total_elapsed_time: builtin_interfaces/Duration
+
+# ============================================================================
+# TOPICS - Navigation Status and Visualization
+# ============================================================================
+
+topics:
+  # Global plan (high-level path)
+  /plan:
+    message_type: nav_msgs/Path
+    qos:
+      reliability: RELIABLE
+      durability: TRANSIENT_LOCAL
+      history: KEEP_LAST
+      depth: 1
+    description: Global path from planner (waypoints)
+    frame_id: "map"
+
+  # Local plan (footsteps)
+  /local_plan:
+    message_type: nav_msgs/Path
+    qos:
+      reliability: RELIABLE
+      durability: TRANSIENT_LOCAL
+      history: KEEP_LAST
+      depth: 1
+    description: Local trajectory (footstep sequence)
+    frame_id: "odom"
+
+  # Footstep plan visualization
+  /footstep_plan:
+    message_type: custom_msgs/FootstepPlan
+    qos:
+      reliability: RELIABLE
+      durability: TRANSIENT_LOCAL
+      history: KEEP_LAST
+      depth: 1
+    description: Detailed footstep plan with stability info
+
+  /footstep_markers:
+    message_type: visualization_msgs/MarkerArray
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: RViz markers for footstep visualization
+
+  # Velocity commands
+  /cmd_vel:
+    message_type: geometry_msgs/Twist
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: Velocity commands for controller
+    rate: 20  # Hz
+
+  # Costmaps
+  /global_costmap/costmap:
+    message_type: nav_msgs/OccupancyGrid
+    qos:
+      reliability: RELIABLE
+      durability: TRANSIENT_LOCAL
+      history: KEEP_LAST
+      depth: 1
+    description: Global costmap for long-range planning
+    frame_id: "map"
+
+  /local_costmap/costmap:
+    message_type: nav_msgs/OccupancyGrid
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: Local costmap for obstacle avoidance
+    frame_id: "odom"
+    update_rate: 5  # Hz
+
+  # Costmap updates (layered)
+  /global_costmap/costmap_updates:
+    message_type: map_msgs/OccupancyGridUpdate
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 5
+    description: Incremental costmap updates
+
+  # Stability metrics
+  /stability/zmp:
+    message_type: geometry_msgs/PointStamped
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: Zero Moment Point position
+    frame_id: "base_link"
+    rate: 100  # Hz
+
+  /stability/com:
+    message_type: geometry_msgs/PointStamped
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: Center of Mass position
+    frame_id: "base_link"
+    rate: 100  # Hz
+
+  /stability/margin:
+    message_type: std_msgs/Float32
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: Current stability margin (meters)
+    rate: 100  # Hz
+
+# ============================================================================
+# SERVICES - Navigation Control
+# ============================================================================
+
+services:
+  # Clear costmap
+  /global_costmap/clear_entirely_global_costmap:
+    service_type: nav2_msgs/ClearEntireCostmap
+    description: Clear entire global costmap
+    request: {}
+    response:
+      success: bool
+
+  /local_costmap/clear_entirely_local_costmap:
+    service_type: nav2_msgs/ClearEntireCostmap
+    description: Clear entire local costmap
+    request: {}
+    response:
+      success: bool
+
+  # Get costmap
+  /global_costmap/get_costmap:
+    service_type: nav2_msgs/GetCostmap
+    description: Retrieve current global costmap
+    request:
+      specs:
+        resolution: float32
+        size_x: float32
+        size_y: float32
+    response:
+      map: nav_msgs/OccupancyGrid
+
+  # Validate footstep plan
+  /validate_footstep_plan:
+    service_type: custom_msgs/ValidateFootstepPlan
+    description: Check if footstep plan is kinematically feasible and stable
+    request:
+      plan: custom_msgs/FootstepPlan
+      check_collision: bool
+      check_kinematics: bool
+      check_stability: bool
+    response:
+      valid: bool
+      error_code: int8                # 0=Valid, 1=Collision, 2=Kinematics, 3=Stability
+      error_message: string
+      first_invalid_step: int32       # Index of first invalid footstep
+
+  # Update footstep constraints
+  /set_footstep_constraints:
+    service_type: custom_msgs/SetFootstepConstraints
+    description: Update bipedal planning constraints at runtime
+    request:
+      max_step_length: float32        # meters
+      max_step_width: float32         # meters
+      max_step_height: float32        # meters
+      min_step_duration: float32      # seconds
+      stability_margin: float32       # meters
+    response:
+      success: bool
+      message: string
+
+  # Relocalize robot
+  /reinitialize_global_localization:
+    service_type: std_srvs/Empty
+    description: Trigger global relocalization (e.g., after tracking loss)
+    request: {}
+    response: {}
+
+# ============================================================================
+# PARAMETERS - Nav2 Configuration
+# ============================================================================
+
+parameters:
+  # Planner Server
+  /planner_server/expected_planner_frequency:
+    type: double
+    default: 1.0                      # Hz (bipedal planning is slower)
+    range: [0.1, 10.0]
+
+  /planner_server/planner_plugins:
+    type: string_array
+    default: ["GridBased", "FootstepPlanner"]
+    description: List of planner plugin names
+
+  /planner_server/GridBased/plugin:
+    type: string
+    default: "nav2_navfn_planner/NavfnPlanner"
+    description: High-level grid planner
+
+  /planner_server/FootstepPlanner/plugin:
+    type: string
+    default: "custom_footstep_planner/FootstepPlannerPlugin"
+    description: Bipedal footstep planner plugin
+
+  # Controller Server
+  /controller_server/controller_frequency:
+    type: double
+    default: 20.0                     # Hz
+    range: [5.0, 100.0]
+
+  /controller_server/controller_plugins:
+    type: string_array
+    default: ["BipedController"]
+
+  /controller_server/BipedController/plugin:
+    type: string
+    default: "custom_footstep_planner/BipedControllerPlugin"
+
+  /controller_server/BipedController/max_vel_x:
+    type: double
+    default: 0.5                      # m/s (conservative for bipeds)
+    range: [0.0, 2.0]
+
+  /controller_server/BipedController/max_vel_theta:
+    type: double
+    default: 0.5                      # rad/s
+    range: [0.0, 2.0]
+
+  # Footstep Planner Constraints
+  /FootstepPlanner/max_step_length:
+    type: double
+    default: 0.4                      # meters
+    range: [0.1, 0.8]
+    description: Maximum forward step length
+
+  /FootstepPlanner/max_step_width:
+    type: double
+    default: 0.3                      # meters
+    range: [0.1, 0.5]
+    description: Maximum lateral step width
+
+  /FootstepPlanner/max_step_height:
+    type: double
+    default: 0.15                     # meters
+    range: [0.0, 0.3]
+    description: Maximum step height (stairs)
+
+  /FootstepPlanner/min_step_duration:
+    type: double
+    default: 0.5                      # seconds
+    range: [0.1, 2.0]
+    description: Minimum time per footstep
+
+  /FootstepPlanner/stability_margin:
+    type: double
+    default: 0.05                     # meters
+    range: [0.01, 0.1]
+    description: ZMP safety margin from support polygon edge
+
+  /FootstepPlanner/enable_stability_check:
+    type: bool
+    default: true
+    description: Validate ZMP stability constraints
+
+  /FootstepPlanner/footprint_padding:
+    type: double
+    default: 0.05                     # meters
+    range: [0.0, 0.2]
+    description: Safety padding around foot collision boundary
+
+  # Costmap Parameters
+  /global_costmap/global_frame:
+    type: string
+    default: "map"
+
+  /global_costmap/robot_base_frame:
+    type: string
+    default: "base_link"
+
+  /global_costmap/resolution:
+    type: double
+    default: 0.05                     # meters/cell
+    range: [0.01, 0.2]
+
+  /global_costmap/width:
+    type: int
+    default: 100                      # cells
+    range: [10, 1000]
+
+  /global_costmap/height:
+    type: int
+    default: 100                      # cells
+    range: [10, 1000]
+
+  /local_costmap/width:
+    type: int
+    default: 50
+    range: [10, 200]
+
+  /local_costmap/height:
+    type: int
+    default: 50
+    range: [10, 200]
+
+  /local_costmap/update_frequency:
+    type: double
+    default: 5.0                      # Hz
+    range: [1.0, 50.0]
+
+  /local_costmap/publish_frequency:
+    type: double
+    default: 2.0                      # Hz
+    range: [0.5, 20.0]
+
+  # Robot footprint (bipedal)
+  /local_costmap/footprint:
+    type: string
+    default: "[[0.15, 0.1], [0.15, -0.1], [-0.15, -0.1], [-0.15, 0.1]]"
+    description: Robot footprint polygon (meters, CCW from front-left)
+
+# ============================================================================
+# CUSTOM MESSAGE DEFINITIONS
+# ============================================================================
+
+custom_messages:
+  custom_msgs/FootstepPlan:
+    fields:
+      - {name: header, type: std_msgs/Header}
+      - {name: footsteps, type: custom_msgs/Footstep[]}
+      - {name: total_duration, type: float32}
+      - {name: min_zmp_margin, type: float32}
+      - {name: path_length, type: float32}
+
+  custom_msgs/Footstep:
+    fields:
+      - {name: step_id, type: int32}
+      - {name: foot, type: uint8}     # 0=Left, 1=Right
+      - {name: pose, type: geometry_msgs/Pose}
+      - {name: duration, type: float32}
+      - {name: zmp_position, type: geometry_msgs/Point}
+      - {name: stability_margin, type: float32}
+      - {name: contact_polygon, type: geometry_msgs/Polygon}
+
+  custom_msgs/ValidateFootstepPlan:
+    request:
+      - {name: plan, type: custom_msgs/FootstepPlan}
+      - {name: check_collision, type: bool}
+      - {name: check_kinematics, type: bool}
+      - {name: check_stability, type: bool}
+    response:
+      - {name: valid, type: bool}
+      - {name: error_code, type: int8}
+      - {name: error_message, type: string}
+      - {name: first_invalid_step, type: int32}
+
+  custom_msgs/SetFootstepConstraints:
+    request:
+      - {name: max_step_length, type: float32}
+      - {name: max_step_width, type: float32}
+      - {name: max_step_height, type: float32}
+      - {name: min_step_duration, type: float32}
+      - {name: stability_margin, type: float32}
+    response:
+      - {name: success, type: bool}
+      - {name: message, type: string}
+
+# ============================================================================
+# VALIDATION RULES
+# ============================================================================
+
+validation:
+  footstep_plan:
+    - constraint: "Footsteps must alternate feet"
+      check: "footsteps[i].foot != footsteps[i+1].foot"
+    - constraint: "ZMP must be inside support polygon"
+      check: "stability_margin > 0 for all footsteps"
+    - constraint: "Step length within limits"
+      check: "||footsteps[i].pose.position - footsteps[i-1].pose.position|| <= max_step_length"
+
+  costmap_sync:
+    topics: ["/global_costmap/costmap", "/local_costmap/costmap"]
+    max_age: 5.0                      # seconds
+
+  stability_monitoring:
+    topic: "/stability/margin"
+    min_value: 0.01                   # meters (emergency stop if violated)
+    alarm_threshold: 0.02             # meters (warning)
+
+# ============================================================================
+# BEHAVIOR TREE STRUCTURE (Example)
+# ============================================================================
+
+behavior_tree_example: |
+  <root main_tree_to_execute="MainTree">
+    <BehaviorTree ID="MainTree">
+      <RecoveryNode number_of_retries="3" name="NavigateRecovery">
+        <PipelineSequence name="NavigateWithReplanning">
+          <ComputePathToPose goal="{goal}" path="{path}" planner_id="FootstepPlanner"/>
+          <FollowPath path="{path}" controller_id="BipedController"/>
+        </PipelineSequence>
+        <ReactiveFallback name="RecoveryActions">
+          <ClearEntireCostmap name="ClearLocalCostmap" service_name="local_costmap/clear_entirely_local_costmap"/>
+          <Spin spin_dist="1.57" name="Spin"/>
+          <BackUp backup_dist="0.2" backup_speed="0.1" name="BackUp"/>
+        </ReactiveFallback>
+      </RecoveryNode>
+    </BehaviorTree>
+  </root>
+
+# ============================================================================
+# EXAMPLE USAGE (Python)
+# ============================================================================
+
+example_code: |
+  import rclpy
+  from rclpy.node import Node
+  from rclpy.action import ActionClient
+  from nav2_msgs.action import NavigateToPose
+  from geometry_msgs.msg import PoseStamped
+
+  class BipedalNavigator(Node):
+      def __init__(self):
+          super().__init__('bipedal_navigator')
+
+          self.nav_client = ActionClient(
+              self,
+              NavigateToPose,
+              '/navigate_to_pose'
+          )
+
+      def navigate_to_goal(self, x, y, yaw):
+          # Wait for action server
+          self.nav_client.wait_for_server()
+
+          # Create goal
+          goal_msg = NavigateToPose.Goal()
+          goal_msg.pose = PoseStamped()
+          goal_msg.pose.header.frame_id = 'map'
+          goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
+          goal_msg.pose.pose.position.x = x
+          goal_msg.pose.pose.position.y = y
+
+          # Convert yaw to quaternion
+          from tf_transformations import quaternion_from_euler
+          q = quaternion_from_euler(0, 0, yaw)
+          goal_msg.pose.pose.orientation.x = q[0]
+          goal_msg.pose.pose.orientation.y = q[1]
+          goal_msg.pose.pose.orientation.z = q[2]
+          goal_msg.pose.pose.orientation.w = q[3]
+
+          # Send goal
+          self.get_logger().info(f'Navigating to ({x}, {y}, {yaw})')
+          send_goal_future = self.nav_client.send_goal_async(
+              goal_msg,
+              feedback_callback=self.feedback_callback
+          )
+          send_goal_future.add_done_callback(self.goal_response_callback)
+
+      def feedback_callback(self, feedback_msg):
+          feedback = feedback_msg.feedback
+          self.get_logger().info(
+              f'Step {feedback.current_footstep}/{feedback.total_footsteps}, '
+              f'Distance: {feedback.distance_remaining:.2f}m, '
+              f'Stability: {feedback.stability_margin:.3f}m'
+          )
+
+      def goal_response_callback(self, future):
+          goal_handle = future.result()
+          if not goal_handle.accepted:
+              self.get_logger().error('Goal rejected')
+              return
+
+          self.get_logger().info('Goal accepted')
+          result_future = goal_handle.get_result_async()
+          result_future.add_done_callback(self.result_callback)
+
+      def result_callback(self, future):
+          result = future.result().result
+          if result.result == 1:  # Succeeded
+              self.get_logger().info('Navigation succeeded!')
+          else:
+              self.get_logger().error(f'Navigation failed with code {result.error_code}')

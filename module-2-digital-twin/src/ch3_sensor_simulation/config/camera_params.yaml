@@ -1,0 +1,45 @@
+# Depth Camera Configuration
+# Based on Intel RealSense D435i specifications
+
+depth_camera:
+  ros__parameters:
+    # Image resolution
+    image_width: 640
+    image_height: 480
+    image_format: "R8G8B8"   # RGB format
+
+    # Depth range
+    clip_near: 0.3           # Minimum depth (m)
+    clip_far: 10.0           # Maximum depth (m)
+
+    # Field of view
+    horizontal_fov: 1.5184   # 87° in radians
+    vertical_fov: 1.01229    # 58° in radians
+
+    # Timing
+    update_rate: 30.0        # Frames per second (Hz)
+
+    # Noise model (depth accuracy)
+    noise_type: "gaussian"
+    noise_mean: 0.0
+    noise_stddev: 0.007      # 7mm standard deviation (< 2% at 2m)
+
+    # Camera intrinsics (example for 640x480)
+    fx: 383.0                # Focal length X (pixels)
+    fy: 383.0                # Focal length Y (pixels)
+    cx: 320.0                # Principal point X (pixels)
+    cy: 240.0                # Principal point Y (pixels)
+
+    # Distortion coefficients (k1, k2, p1, p2, k3)
+    distortion: [0.0, 0.0, 0.0, 0.0, 0.0]  # No distortion in simulation
+
+    # Frame names
+    frame_id: "camera_link"
+    optical_frame_id: "camera_optical_frame"
+
+    # Topic names
+    rgb_topic: "/camera/rgb/image_raw"
+    depth_topic: "/camera/depth/image_raw"
+    rgb_info_topic: "/camera/rgb/camera_info"
+    depth_info_topic: "/camera/depth/camera_info"
+    pointcloud_topic: "/camera/depth/points"

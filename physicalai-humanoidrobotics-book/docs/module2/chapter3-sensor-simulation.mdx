@@ -1,0 +1,558 @@
+---
+sidebar_position: 4
+title: "Chapter 3: Sensor Simulation"
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Chapter 3: Sensor Simulation
+
+:::info Learning Outcomes (Bloom's Level: CREATE)
+By the end of this chapter, you will be able to:
+- **Configure** Gazebo sensor plugins (LiDAR, depth cameras, IMUs) with custom noise models
+- **Analyze** sensor data formats (LaserScan, PointCloud2, Imu) and validate against ground truth
+- **Create** robot URDFs with multiple sensor types for comprehensive perception testing
+- **Calibrate** sensor parameters (FOV, range, resolution, noise) to match real-world hardware
+- **Evaluate** sensor accuracy using RViz2 visualization and automated validation scripts
+:::
+
+## Prerequisites
+
+**Required Knowledge**:
+- Chapter 1: Physics Simulation (URDF structure, Gazebo plugins)
+- ROS 2 message types (sensor_msgs, geometry_msgs)
+- Basic linear algebra (vectors, coordinate transforms)
+
+**Software Requirements**:
+<Tabs groupId="operating-systems">
+  <TabItem value="docker" label="Docker (Recommended)" default>
+    ```bash
+    # Use existing Gazebo Docker image from Chapter 1
+    docker run -it --rm --network host -e DISPLAY=$DISPLAY module2-gazebo:humble
+
+    # Inside container, install RViz2 for visualization
+    sudo apt update
+    sudo apt install ros-humble-rviz2
+    ```
+  </TabItem>
+  <TabItem value="linux" label="Ubuntu 22.04/24.04">
+    ```bash
+    # ROS 2 Humble with RViz2
+    sudo apt install ros-humble-desktop-full ros-humble-rviz2
+
+    # Gazebo sensor plugins (should already be installed from Chapter 1)
+    sudo apt install ros-humble-gazebo-ros-pkgs
+    ```
+  </TabItem>
+</Tabs>
+
+**Hardware Requirements**:
+- **Tier A (Simulation Only)**: 8GB RAM, integrated GPU (sufficient for sensor simulation)
+- **Tier B (Edge AI)**: Jetson Orin + RealSense D435i (optional - for comparing sim vs real sensor data)
+- **Tier C (Physical Robot)**: Not required for this chapter
+
+---
+
+## Why Sensor Simulation Matters
+
+Before deploying perception algorithms to physical robots, you need to:
+
+- **Test sensor coverage**: Verify LiDAR FOV covers blind spots, cameras capture necessary detail
+- **Validate algorithms**: Test obstacle detection, SLAM, localization in controlled environments
+- **Model noise effects**: Understand how sensor noise propagates through your perception pipeline
+- **Simulate edge cases**: Test sensor failures, occlusions, extreme lighting without hardware risk
+
+**Use Case**: Test a warehouse robot's LiDAR-based collision avoidance in a simulated environment with shelves, forklifts, and moving pedestrians before deploying to the real facility.
+
+---
+
+## Section 1: Sensor Types Overview
+
+### 1. LiDAR (Light Detection and Ranging)
+
+**Function**: Measures distance to objects using laser pulses (time-of-flight principle)
+
+**Gazebo Output**: `sensor_msgs/LaserScan` (2D) or `sensor_msgs/PointCloud2` (3D)
+
+**Key Parameters**:
+- **Range**: Min/max distance (e.g., 0.1m - 30m for indoor LiDAR)
+- **FOV**: Field of view (e.g., 270° for 2D LiDAR, 360° for spinning LiDAR)
+- **Resolution**: Angular resolution (e.g., 0.25° = 1440 samples for 360°)
+- **Update Rate**: Scan frequency (e.g., 10 Hz)
+
+**Use Cases**:
+- ✅ Obstacle detection and collision avoidance
+- ✅ SLAM (Simultaneous Localization and Mapping)
+- ✅ Navigation in structured environments
+- ❌ Color/texture recognition (LiDAR doesn't capture appearance)
+
+### 2. Depth Camera (RGB-D)
+
+**Function**: Combines RGB image with per-pixel depth measurement
+
+**Gazebo Output**:
+- `sensor_msgs/Image` (RGB)
+- `sensor_msgs/Image` (depth map, 16-bit or 32-bit float)
+- `sensor_msgs/PointCloud2` (reconstructed 3D points)
+
+**Key Parameters**:
+- **Resolution**: Image size (e.g., 640x480, 1920x1080)
+- **Depth Range**: Min/max depth (e.g., 0.3m - 10m for RealSense D435i)
+- **FOV**: Horizontal/vertical field of view (e.g., 87° x 58°)
+- **Update Rate**: FPS (e.g., 30 Hz)
+
+**Use Cases**:
+- ✅ Object recognition and pose estimation
+- ✅ Human-robot interaction (gesture recognition, face tracking)
+- ✅ Dense 3D reconstruction
+- ❌ Long-range outdoor navigation (limited range vs LiDAR)
+
+### 3. IMU (Inertial Measurement Unit)
+
+**Function**: Measures linear acceleration and angular velocity
+
+**Gazebo Output**: `sensor_msgs/Imu`
+
+**Key Parameters**:
+- **Accelerometer Range**: ±2g to ±16g
+- **Gyroscope Range**: ±250°/s to ±2000°/s
+- **Noise**: Gaussian noise on acceleration/angular velocity
+- **Update Rate**: IMU frequency (e.g., 100 Hz)
+
+**Use Cases**:
+- ✅ Robot orientation estimation (roll, pitch, yaw)
+- ✅ Sensor fusion with odometry (EKF, UKF filters)
+- ✅ Detecting falls, collisions, sudden movements
+- ❌ Position tracking (IMU drifts without external references)
+
+---
+
+## Section 2: Gazebo Sensor Plugins
+
+### LiDAR Plugin Configuration
+
+**URDF Example** (2D LiDAR):
+
+```xml
+<gazebo reference="lidar_link">
+  <sensor name="lidar_sensor" type="ray">
+    <pose>0 0 0 0 0 0</pose>
+    <visualize>true</visualize>  <!-- Show laser rays in Gazebo GUI -->
+    <update_rate>10</update_rate>
+
+    <ray>
+      <scan>
+        <horizontal>
+          <samples>720</samples>      <!-- 720 rays -->
+          <resolution>1</resolution>
+          <min_angle>-2.35619</min_angle>  <!-- -135° in radians -->
+          <max_angle>2.35619</max_angle>   <!-- +135° in radians -->
+        </horizontal>
+      </scan>
+      <range>
+        <min>0.1</min>   <!-- Minimum detectable distance (m) -->
+        <max>30.0</max>  <!-- Maximum detectable distance (m) -->
+        <resolution>0.01</resolution>  <!-- Distance resolution (m) -->
+      </range>
+      <noise>
+        <type>gaussian</type>
+        <mean>0.0</mean>
+        <stddev>0.01</stddev>  <!-- 1cm standard deviation -->
+      </noise>
+    </ray>
+
+    <plugin name="gazebo_ros_lidar" filename="libgazebo_ros_ray_sensor.so">
+      <ros>
+        <namespace>/robot</namespace>
+        <remapping>~/out:=scan</remapping>  <!-- Publishes to /robot/scan -->
+      </ros>
+      <output_type>sensor_msgs/LaserScan</output_type>
+      <frame_name>lidar_link</frame_name>
+    </plugin>
+  </sensor>
+</gazebo>
+```
+
+**Visualization in RViz2**:
+```bash
+rviz2
+# Add → LaserScan → Topic: /robot/scan
+# Fixed Frame: base_link or world
+```
+
+### Depth Camera Plugin Configuration
+
+**URDF Example** (RGB-D camera):
+
+```xml
+<gazebo reference="camera_link">
+  <sensor name="depth_camera" type="depth">
+    <update_rate>30</update_rate>
+    <camera>
+      <horizontal_fov>1.5184</horizontal_fov>  <!-- 87° in radians -->
+      <image>
+        <width>640</width>
+        <height>480</height>
+        <format>R8G8B8</format>  <!-- RGB format -->
+      </image>
+      <clip>
+        <near>0.3</near>  <!-- Minimum depth (m) -->
+        <far>10.0</far>   <!-- Maximum depth (m) -->
+      </clip>
+      <noise>
+        <type>gaussian</type>
+        <mean>0.0</mean>
+        <stddev>0.007</stddev>  <!-- 7mm depth noise -->
+      </noise>
+    </camera>
+
+    <plugin name="gazebo_ros_depth_camera" filename="libgazebo_ros_camera.so">
+      <ros>
+        <namespace>/robot</namespace>
+        <remapping>~/image_raw:=camera/rgb/image_raw</remapping>
+        <remapping>~/depth/image_raw:=camera/depth/image_raw</remapping>
+        <remapping>~/camera_info:=camera/rgb/camera_info</remapping>
+        <remapping>~/depth/camera_info:=camera/depth/camera_info</remapping>
+        <remapping>~/points:=camera/depth/points</remapping>
+      </ros>
+      <camera_name>depth_camera</camera_name>
+      <frame_name>camera_link</frame_name>
+      <hack_baseline>0.07</hack_baseline>  <!-- Stereo baseline (m) -->
+    </plugin>
+  </sensor>
+</gazebo>
+```
+
+**Visualization in RViz2**:
+```bash
+rviz2
+# Add → Image → Topic: /robot/camera/rgb/image_raw (RGB)
+# Add → Image → Topic: /robot/camera/depth/image_raw (depth map, grayscale)
+# Add → PointCloud2 → Topic: /robot/camera/depth/points (3D points)
+```
+
+### IMU Plugin Configuration
+
+**URDF Example**:
+
+```xml
+<gazebo reference="imu_link">
+  <sensor name="imu_sensor" type="imu">
+    <always_on>true</always_on>
+    <update_rate>100</update_rate>  <!-- 100 Hz -->
+
+    <plugin name="gazebo_ros_imu" filename="libgazebo_ros_imu_sensor.so">
+      <ros>
+        <namespace>/robot</namespace>
+        <remapping>~/out:=imu</remapping>  <!-- Publishes to /robot/imu -->
+      </ros>
+      <frame_name>imu_link</frame_name>
+
+      <!-- Noise parameters (match real IMU specs, e.g., MPU-6050) -->
+      <initial_orientation_as_reference>false</initial_orientation_as_reference>
+
+      <!-- Angular velocity noise (rad/s) -->
+      <angular_velocity_noise>
+        <mean>0.0</mean>
+        <stddev>0.0035</stddev>  <!-- ~0.2°/s -->
+      </angular_velocity_noise>
+
+      <!-- Linear acceleration noise (m/s²) -->
+      <linear_acceleration_noise>
+        <mean>0.0</mean>
+        <stddev>0.017</stddev>  <!-- ~0.17% of g -->
+      </linear_acceleration_noise>
+    </plugin>
+  </sensor>
+</gazebo>
+```
+
+**Visualization in RViz2**:
+```bash
+rviz2
+# Add → Imu → Topic: /robot/imu
+# Shows orientation (quaternion) and acceleration vectors
+```
+
+---
+
+## Section 3: Sensor Calibration and Noise Modeling
+
+### Why Noise Models Matter
+
+Real-world sensors are **never perfect**. They exhibit:
+- **Gaussian noise**: Random variations around true value (white noise)
+- **Bias drift**: Systematic offset that changes over time (especially IMUs)
+- **Outliers**: Occasional wildly incorrect readings
+- **Environmental effects**: Sunlight interference (depth cameras), reflective surfaces (LiDAR)
+
+**Simulation Best Practice**: Match Gazebo noise parameters to real sensor datasheets.
+
+### Configuring Gaussian Noise
+
+**Example**: RealSense D435i depth camera spec sheet:
+- Depth accuracy: < 2% at 2m = 0.04m standard deviation
+- Angular noise: 0.007 rad (typical)
+
+**Gazebo Configuration**:
+```xml
+<noise>
+  <type>gaussian</type>
+  <mean>0.0</mean>
+  <stddev>0.04</stddev>  <!-- Match datasheet spec -->
+</noise>
+```
+
+### YAML Configuration Files
+
+Instead of hardcoding noise in URDF, use YAML params:
+
+**lidar_params.yaml**:
+```yaml
+lidar_sensor:
+  ros__parameters:
+    range_min: 0.1
+    range_max: 30.0
+    angle_min: -2.35619  # -135°
+    angle_max: 2.35619   # +135°
+    samples: 720
+    update_rate: 10.0
+    noise_stddev: 0.01   # 1cm noise
+```
+
+**Load in Launch File**:
+```python
+from launch_ros.actions import Node
+
+lidar_params = os.path.join(
+    get_package_share_directory('ch3_sensor_simulation'),
+    'config', 'lidar_params.yaml'
+)
+
+# Node can read params for dynamic reconfiguration
+```
+
+### Validating Sensor Accuracy
+
+**Ground Truth Test** (Python script):
+
+```python
+import rclpy
+from sensor_msgs.msg import LaserScan
+import math
+
+class LiDARValidator:
+    def __init__(self):
+        self.node = rclpy.create_node('lidar_validator')
+        self.sub = self.node.create_subscription(
+            LaserScan, '/robot/scan', self.scan_callback, 10
+        )
+        self.known_distance = 5.0  # Place obstacle 5m away in Gazebo
+
+    def scan_callback(self, msg):
+        # Find minimum distance reading (closest obstacle)
+        min_range = min([r for r in msg.ranges if r > msg.range_min])
+
+        # Calculate error
+        error = abs(min_range - self.known_distance)
+        error_percent = (error / self.known_distance) * 100
+
+        print(f"Measured: {min_range:.3f}m, Ground Truth: {self.known_distance}m")
+        print(f"Error: {error:.3f}m ({error_percent:.1f}%)")
+
+        # Assert accuracy (allow 2% error + noise)
+        assert error_percent < 2.0 + (msg.range_max * 0.01), "Sensor accuracy failed!"
+```
+
+---
+
+## Exercises
+
+### Exercise 3.1: Add Custom Sensor to Robot
+
+**Difficulty**: 🟡 Intermediate
+
+**Task**: Add a front-facing LiDAR sensor to the differential drive robot from Chapter 1.
+
+**Steps**:
+1. Copy `diff_drive_robot.urdf` to `sensor_robot.urdf`
+2. Add new link for LiDAR mount (10cm above chassis)
+3. Add Gazebo `<sensor type="ray">` plugin with:
+   - FOV: 270° (-135° to +135°)
+   - Range: 0.1m to 10m
+   - Resolution: 1° (360 samples)
+4. Launch robot in Gazebo
+5. Verify `/scan` topic publishes LaserScan messages
+6. Visualize in RViz2
+
+**Acceptance Criteria**:
+- [ ] Robot spawns without errors
+- [ ] `ros2 topic echo /scan` shows valid LaserScan data
+- [ ] RViz2 displays laser rays around robot
+- [ ] Place obstacle in Gazebo → LiDAR detects it
+
+### Exercise 3.2: Calibrate Sensor Noise Model
+
+**Difficulty**: 🔴 Advanced
+
+**Task**: Measure real-world sensor noise and replicate in Gazebo.
+
+**Prerequisites**: Access to physical RealSense D435i camera (or similar)
+
+**Steps**:
+1. **Collect Real Data**:
+   ```bash
+   ros2 bag record /camera/depth/image_raw -d 30  # Record 30 seconds
+   ```
+2. **Analyze Noise** (Python script):
+   - Point camera at flat wall (known distance = 1.0m)
+   - Calculate standard deviation of depth readings
+   - Expected: σ ≈ 1-2% of measured distance
+3. **Update Gazebo URDF**:
+   - Set `<stddev>` to match measured noise
+4. **Validate**:
+   - Spawn robot in Gazebo, point camera at wall 1.0m away
+   - Record depth data: `ros2 bag record /camera/depth/image_raw -d 30`
+   - Compare std deviation (should match real-world data ±10%)
+
+**Acceptance Criteria**:
+- [ ] Real-world noise σ calculated (document value)
+- [ ] Gazebo `<stddev>` parameter updated
+- [ ] Simulated noise matches real data within 10%
+- [ ] Validation script proves similarity (statistical test)
+
+### Exercise 3.3: Validate Sensor Against Ground Truth
+
+**Difficulty**: 🟢 Beginner
+
+**Task**: Place obstacles at known distances in Gazebo and verify LiDAR accuracy.
+
+**Steps**:
+1. Spawn robot with LiDAR in empty world
+2. Add box obstacles at distances: 1m, 3m, 5m (use SDF `<pose>`)
+3. Write Python script to:
+   - Subscribe to `/scan`
+   - Find 3 minimum distance readings (one per obstacle)
+   - Compare to known distances (1, 3, 5 meters)
+   - Calculate error percentage
+4. Run validation: `python3 validate_distances.py`
+5. Expected: Error < 2% (within noise bounds)
+
+**Acceptance Criteria**:
+- [ ] Obstacles placed correctly in Gazebo (verify with measurement tool)
+- [ ] Script detects all 3 obstacles
+- [ ] Error < 2% for all obstacles
+- [ ] Screenshot of RViz2 showing LiDAR detecting obstacles
+
+---
+
+## Troubleshooting
+
+<details>
+<summary><strong>Issue</strong>: LiDAR shows all ranges as "inf" (infinity)</summary>
+
+**Cause**: Sensor not detecting any obstacles, or `<visualize>` rays not hitting anything
+
+**Solution**:
+1. **Check sensor placement**: Ensure LiDAR link is above ground (not intersecting floor)
+2. **Add ground plane**: Gazebo world must have collision geometry
+3. **Check range limits**: `<min>` and `<max>` must encompass expected distances
+4. **Verify plugin loaded**: `ros2 topic list` should show `/scan` topic
+
+</details>
+
+<details>
+<summary><strong>Issue</strong>: Depth camera image is completely black</summary>
+
+**Cause**: Camera clipping planes too restrictive, or no objects in FOV
+
+**Solution**:
+1. **Adjust clip planes**: Set `<near>` to 0.1, `<far>` to 100.0 (wide range)
+2. **Add obstacles**: Place boxes in front of camera (within 10m)
+3. **Check lighting**: Add `<light>` to Gazebo world (depth cameras need light)
+4. **Verify topic**: `ros2 topic echo /camera/rgb/image_raw --no-arr` (should show non-zero data)
+
+</details>
+
+<details>
+<summary><strong>Issue</strong>: IMU orientation drifts over time in simulation</summary>
+
+**Cause**: This is expected behavior! Real IMUs accumulate error (gyroscope drift)
+
+**Solution** (if you need stable orientation):
+1. **Use ground truth plugin**:
+   ```xml
+   <plugin name="p3d_base_controller" filename="libgazebo_ros_p3d.so">
+     <ros>
+       <remapping>~/out:=ground_truth/odom</remapping>
+     </ros>
+     <frame_name>world</frame_name>
+     <body_name>base_link</body_name>
+     <update_rate>50.0</update_rate>
+   </plugin>
+   ```
+2. **Sensor fusion**: Combine IMU with odometry using EKF (robot_localization package)
+3. **Reset periodically**: In real systems, use magnetometer or visual odometry to correct drift
+
+</details>
+
+---
+
+## Key Takeaways
+
+:::tip Summary
+- **Three sensor types**: LiDAR (distance), Depth Camera (RGB-D), IMU (orientation)
+- **Gazebo plugins**: `libgazebo_ros_ray_sensor`, `libgazebo_ros_camera`, `libgazebo_ros_imu_sensor`
+- **Noise modeling**: Match `<stddev>` parameters to real sensor datasheets for realistic simulation
+- **RViz2 visualization**: Essential for debugging sensor outputs (LaserScan, Image, PointCloud2, Imu)
+- **Ground truth validation**: Place obstacles at known distances, measure error, ensure < 2-5%
+- **YAML configuration**: Externalize sensor parameters for easy tuning without URDF recompilation
+:::
+
+---
+
+## Next Steps
+
+**For Self-Paced Learners**:
+- [ ] Complete Exercise 3.1 (add LiDAR to robot)
+- [ ] Complete Exercise 3.3 (validate against ground truth)
+- [ ] Optional: Exercise 3.2 (advanced calibration with real hardware)
+- [ ] Proceed to **Integration Project** (combining Chapters 1-3)
+
+**For Cohort-Based Learners** (Week 8, Days 1-2):
+- [ ] Complete Exercise 3.1 (core skill)
+- [ ] Attempt Exercise 3.3 (validation practice)
+- [ ] Share RViz2 screenshots in forum
+- [ ] Optional: Exercise 3.2 for students with hardware access
+
+---
+
+## Advanced Extensions (Optional)
+
+:::note For Experts
+If you found this chapter straightforward, try these additional challenges:
+
+1. **Multi-Sensor Fusion**: Combine LiDAR + IMU using `robot_localization` EKF for improved odometry
+2. **Custom Sensor Plugin**: Write C++ Gazebo plugin for ultrasonic sensor (simpler than LiDAR)
+3. **Noise Characterization**: Collect 1000+ samples from real sensor, fit statistical distribution beyond Gaussian
+4. **Dynamic Obstacles**: Test LiDAR performance with moving pedestrians (NavMeshAgent in Gazebo)
+5. **Sensor Failure Simulation**: Add random dropout/outliers to mimic hardware failures
+:::
+
+---
+
+## Additional Resources
+
+- 📖 [Gazebo Sensors Documentation](https://classic.gazebosim.org/tutorials?tut=ros_gzplugins#Sensor)
+- 📖 [ROS 2 sensor_msgs Package](https://docs.ros2.org/latest/api/sensor_msgs/index-msg.html)
+- 📖 [RViz2 User Guide](https://github.com/ros2/rviz/blob/rolling/docs/user_guide.md)
+- 🎥 [Video: LiDAR Simulation in Gazebo](https://www.youtube.com/watch?v=example)
+- 📄 [Research: Sim-to-Real Transfer for Perception](https://arxiv.org/abs/example)
+- 🔧 [RealSense D435i Datasheet](https://www.intelrealsense.com/depth-camera-d435i/)
+
+---
+
+**Chapter Navigation**:
+- ← Previous: [Chapter 2: High-Fidelity Rendering in Unity](./chapter2-unity-rendering)
+- → Next: [Integration Project](./integration-project)

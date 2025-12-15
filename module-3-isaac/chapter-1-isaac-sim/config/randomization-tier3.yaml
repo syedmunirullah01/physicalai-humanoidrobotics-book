@@ -1,0 +1,346 @@
+# Domain Randomization Configuration - Tier 3
+# Advanced randomization: All features including weather, physics, and complex effects
+
+domain_randomization:
+  tier: 3
+  description: "Advanced domain randomization - comprehensive scene, physics, and environmental variations"
+  enabled: true
+  complexity_level: "advanced"
+
+lighting:
+  # Maximum lighting randomization
+  intensity_variance: 0.7      # ±70% from base intensity (maximum variation)
+  color_temp_variance: 3500    # ±3500K from base color temperature (maximum)
+  num_variants: 15             # Maximum lighting setups
+  dynamic_lights: true
+  min_intensity: 1000          # Very low minimum for dark scenes
+  max_intensity: 25000         # Very high maximum for bright scenes
+  base_color_temp: 5500
+  temporal_variation: true     # Lights change over time
+  temporal_frequency_range: [0.1, 2.0]  # Change frequency (Hz)
+
+  # Advanced lighting patterns
+  patterns:
+    - type: "directional"
+      intensity_range: [2000, 20000]
+      color_temp_range: [2000, 10000]
+      movement_enabled: true
+      movement_range: [10, 10, 5]
+      temporal_variation: true
+      temporal_noise: 0.1
+    - type: "point"
+      intensity_range: [1000, 15000]
+      color_temp_range: [2000, 8000]
+      movement_enabled: true
+      movement_range: [5, 5, 2]
+      temporal_variation: true
+      temporal_noise: 0.15
+    - type: "area"
+      intensity_range: [3000, 25000]
+      color_temp_range: [4000, 10000]
+      movement_enabled: true  # Even area lights can move in Tier 3
+      movement_range: [2, 2, 1]
+      temporal_variation: true
+      temporal_noise: 0.05
+    - type: "spot"
+      intensity_range: [2000, 18000]
+      color_temp_range: [3000, 9000]
+      movement_enabled: true
+      movement_range: [8, 8, 3]
+      temporal_variation: true
+      temporal_noise: 0.2
+    - type: "volumetric"
+      enabled: true            # NEW: Volumetric lighting effects
+      density_range: [0.01, 0.1]
+      color_temp_range: [3000, 8000]
+
+textures:
+  # Maximum texture randomization
+  material_randomization: true
+  num_variants: 20             # Maximum texture variants
+  variation_intensity: 0.6     # Maximum variation
+  texture_blending: true
+  texture_interpolation: true
+  procedural_generation: true   # NEW: Generate textures procedurally
+  style_transfer: true         # NEW: Apply style transfer effects
+
+  # Maximum material property ranges
+  material_properties:
+    roughness_range: [0.0, 1.0]    # Full range
+    metallic_range: [0.0, 1.0]     # Full range
+    specular_range: [0.0, 1.0]     # Full range
+    albedo_variance: 0.5           # Maximum color variation
+    normal_map_intensity: [0.0, 2.0] # Normal map variation
+    displacement_scale: [0.0, 0.1]   # Displacement mapping
+
+  # Comprehensive texture library
+  texture_library:
+    floor:
+      - "concrete_01" to "concrete_10"
+      - "tile_01" to "tile_10"
+      - "wood_01" to "wood_10"
+      - "carpet_01" to "carpet_10"
+      - "metal_01" to "metal_10"
+      - "asphalt_01" to "asphalt_05"
+      - "grass_01" to "grass_05"
+    walls:
+      - "cement_wall_01" to "cement_wall_10"
+      - "brick_wall_01" to "brick_wall_10"
+      - "metal_wall_01" to "metal_wall_10"
+      - "drywall_01" to "drywall_10"
+      - "wood_wall_01" to "wood_wall_10"
+      - "glass_wall_01" to "glass_wall_05"
+    objects:
+      - "cardboard_box_01" to "cardboard_box_10"
+      - "metal_surface_01" to "metal_surface_10"
+      - "plastic_surface_01" to "plastic_surface_10"
+      - "wood_surface_01" to "wood_surface_10"
+      - "fabric_surface_01" to "fabric_surface_10"
+      - "leather_surface_01" to "leather_surface_05"
+      - "rubber_surface_01" to "rubber_surface_05"
+
+objects:
+  # Maximum object randomization
+  static_only: false
+  position_jitter: 0.3         # ±30cm (maximum)
+  rotation_jitter: 45.0        # ±45° (maximum)
+  random_removal_prob: 0.3     # 30% removal (maximum)
+
+  # Advanced object appearance
+  appearance:
+    color_variance: 0.4        # Maximum color variation
+    texture_switching: true
+    wear_simulation: true
+    aging_effects: true
+    weathering_effects: true    # NEW: Weather-related wear
+    seasonal_effects: true      # NEW: Seasonal appearance changes
+
+  # Maximum object distribution
+  distribution:
+    clustered_placement: true
+    uniform_placement: true
+    random_placement: true
+    hierarchical_placement: true # NEW: Objects in hierarchies
+    physics_based_placement: true # NEW: Place based on physics
+    cluster_radius: 5.0        # Larger clusters possible
+
+  # Advanced physics randomization
+  physics:
+    friction_variance: 0.5     # ±50% (maximum)
+    restitution_variance: 0.3  # ±30% (maximum)
+    mass_variance: 0.25        # ±25% (maximum)
+    damping_variance: 0.2      # NEW: Damping coefficient variation
+    drag_coefficient: [0.1, 2.0] # NEW: Air resistance variation
+    collision_filtering: true  # NEW: Random collision filtering
+
+  # Dynamic object behaviors
+  dynamics:
+    movement_probability: 0.2  # 20% of objects move during simulation
+    movement_speed_range: [0.01, 0.5] # m/s
+    periodic_movement: true    # Objects move periodically
+    chaotic_movement: false    # Don't enable chaotic movement by default
+
+camera:
+  # Maximum camera randomization
+  noise_sigma: 0.05            # 5% maximum noise
+  noise_model: "mixed"         # Mixed noise types
+  exposure_randomization: true
+  exposure_range: [0.2, 3.0]   # Wide exposure range
+  focus_randomization: true
+  focus_range: [0.5, 2.0]
+  distortion_randomization: true
+  distortion_range: [0.0, 0.3] # Higher distortion possible
+
+  # Advanced camera effects
+  effects:
+    motion_blur: true          # NEW: Motion blur effects
+    chromatic_aberration: true # NEW: Color fringing effects
+    lens_flare: true           # NEW: Lens flare effects
+    vignetting: true           # NEW: Corner darkening
+    bloom: true                # NEW: Light bloom effects
+    depth_of_field: true       # NEW: Depth of field effects
+
+  # Camera parameter randomization
+  parameters:
+    focal_length_variance: 0.2 # ±20% (maximum)
+    aperture_variance: 0.15    # ±15% (maximum)
+    sensor_size_variance: 0.05 # ±5% (maximum)
+    sensor_offset: [0.001, 0.001] # Sensor shift (meters)
+
+environment:
+  # Advanced environmental effects
+  weather_effects: true        # Enable weather effects
+  atmospheric_scattering: true # Enable atmospheric effects
+  fog_enabled: true           # Enable fog
+  precipitation: true         # NEW: Rain/snow effects
+  wind_effects: true          # NEW: Wind simulation
+  temperature_effects: true   # NEW: Temperature-based effects
+
+  # Weather configuration
+  weather:
+    types:
+      - "clear"           # 20% chance
+      - "overcast"        # 25% chance
+      - "light_rain"      # 15% chance
+      - "heavy_rain"      # 10% chance
+      - "fog"             # 15% chance
+      - "snow"            # 10% chance
+      - "sandstorm"       # 5% chance (for outdoor scenes)
+    probability_distribution:
+      clear: 0.2
+      overcast: 0.25
+      light_rain: 0.15
+      heavy_rain: 0.1
+      fog: 0.15
+      snow: 0.1
+      sandstorm: 0.05
+
+  # Atmospheric configuration
+  atmospheric:
+    scattering_coefficient: [0.01, 0.1] # Rayleigh scattering
+    extinction_coefficient: [0.005, 0.05] # Mie scattering
+    haze_density: [0.001, 0.02] # Atmospheric haze
+    visibility_range: [10, 1000] # Visibility distance (meters)
+
+  # Time-of-day randomization
+  time_of_day:
+    enabled: true
+    range: ["06:00", "20:00"]  # Dawn to dusk
+    temporal_lighting: true    # Lighting changes with time
+
+performance:
+  # Maximum performance settings
+  max_performance_impact: 30.0  # Higher impact allowed for maximum diversity
+  validation_frequency: 10      # More frequent validation
+  adaptive_randomization: true
+  performance_recovery: true
+  resource_monitoring: true     # NEW: Monitor all resources
+  early_termination: true       # NEW: Stop if performance too poor
+
+quality_control:
+  # Advanced quality control
+  min_texture_quality: 0.4     # Lower threshold for maximum variation
+  max_light_bleeding: 0.25     # Higher tolerance
+  shadow_quality_threshold: 0.5 # Lower threshold
+  temporal_coherence: 0.7      # NEW: Frame-to-frame consistency
+
+  # Advanced quality checks
+  texture_resolution_check: true
+  lighting_consistency_check: true
+  object_placement_validation: true
+  physics_stability_check: true
+  temporal_stability_check: true # NEW: Check temporal consistency
+
+logging:
+  # Comprehensive logging
+  enable_logging: true
+  log_level: "DEBUG"          # More detailed logging
+  log_file: "randomization_tier3.log"
+  log_statistics: true
+  log_object_changes: true
+  log_camera_changes: true
+  log_performance: true
+  log_physics_changes: true   # NEW: Log physics changes
+  log_environment_changes: true # NEW: Log environment changes
+  log_temporal_changes: true  # NEW: Log time-based changes
+
+validation:
+  # Maximum validation
+  target_diversity_score: 0.9 # Very high target
+  min_visual_difference: 0.25 # High minimum difference
+  consistency_checks: true
+  validation_metrics:
+    - "texture_diversity"
+    - "lighting_variation"
+    - "object_placement_diversity"
+    - "camera_effect_diversity"
+    - "scene_composition_variety"
+    - "temporal_diversity"
+    - "physics_diversity"
+    - "environmental_diversity"
+
+  # Advanced validation
+  object_randomization_validation: true
+  camera_randomization_validation: true
+  physics_randomization_validation: true
+  environmental_validation: true
+  temporal_validation: true
+
+safety:
+  # Maximum safety constraints
+  max_object_movement: 2.0     # Higher movement allowed
+  min_camera_distance: 0.05    # Lower minimum distance
+  collision_avoidance: true
+  physics_stability: true
+  scene_stability: true        # NEW: Overall scene stability
+  temporal_coherence: true     # NEW: Time-based coherence
+
+# Advanced scene-specific configurations
+warehouse_specific:
+  # Advanced warehouse constraints
+  aisle_preservation: true
+  safety_zone_preservation: true
+  equipment_zone_preservation: true
+
+  # Advanced warehouse randomization
+  object_constraints:
+    forklifts:
+      - position_range: [[-25, 25], [-15, 15], [0, 3]]
+      - probability: 0.4
+      - movement_enabled: true
+      - path_following: true   # Forklifts follow paths
+    pallets:
+      - position_range: [[-25, 25], [-15, 15], [0, 1]]
+      - clustering_enabled: true
+      - stacking_probability: 0.3
+    boxes:
+      - position_range: [[-25, 25], [-15, 15], [0.2, 8]] # Higher stacking
+      - clustering_enabled: true
+      - max_stack_height: 6    # Higher stacks in Tier 3
+
+# Advanced training configurations
+training:
+  # Configuration for maximum training diversity
+  diversity_focused: true
+  consistency_penalty: 0.2     # Higher penalty for low diversity
+  novelty_reward: 0.1          # Higher reward for novelty
+  coverage_target: 0.95        # Maximum coverage target
+  adversarial_training: true   # NEW: Prepare for adversarial conditions
+
+# Real-world transfer optimization
+transfer_optimization:
+  # Optimize for maximum sim-to-real transfer
+  transfer_focused: true
+  real_world_statistics:
+    lighting_distribution: "gaussian" # Match real-world lighting stats
+    texture_distribution: "gaussian" # Match real-world texture stats
+    object_placement: "clustered" # Match real-world object placement
+  domain_gap_minimization: true # Actively minimize domain gap
+  uncertainty_quantification: true # NEW: Quantify prediction uncertainty
+
+# Computational requirements
+requirements:
+  # Minimum requirements for Tier 3
+  minimum_gpu_memory_gb: 12.0
+  recommended_gpu_memory_gb: 16.0
+  minimum_vram_bandwidth_gbps: 300
+  recommended_cpu_cores: 8
+  minimum_ram_gb: 32
+  recommended_ram_gb: 64
+
+# Advanced features
+advanced_features:
+  neural_rendering: true       # NEW: Neural rendering corrections
+  differentiable_rendering: true # NEW: Differentiable pipeline
+  learned_priors: true         # NEW: Learned scene priors
+  meta_learning: true          # NEW: Meta-learning for adaptation
+  few_shot_learning: true      # NEW: Few-shot adaptation
+  continual_learning: true     # NEW: Continuous learning capability
+
+# Debug and development settings
+debug:
+  debug_visualization: true    # Visualize randomization effects
+  debug_metrics: true          # Detailed metrics
+  debug_comparison: true       # Compare with real data when available
+  validation_snapshots: true   # Save validation snapshots
+  performance_profiling: true  # Profile performance bottlenecks

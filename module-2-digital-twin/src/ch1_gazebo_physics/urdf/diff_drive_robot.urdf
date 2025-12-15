@@ -1,0 +1,220 @@
+<?xml version="1.0"?>
+<!--
+  Differential drive wheeled robot URDF
+
+  Learning objectives:
+  - Multi-link robot with joints (revolute joints for wheels)
+  - Understanding parent-child link relationships
+  - Joint dynamics (friction, damping)
+  - Gazebo differential drive plugin for motion control
+-->
+<robot name="diff_drive_robot">
+
+  <!-- Base Link (robot chassis) -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.6 0.4 0.2"/>  <!-- 60cm x 40cm x 20cm chassis -->
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <geometry>
+        <box size="0.6 0.4 0.2"/>
+      </geometry>
+    </collision>
+
+    <inertial>
+      <mass value="10.0"/>  <!-- 10 kg chassis -->
+      <!-- Cuboid inertia for 60x40x20cm, 10kg:
+           Ixx = (1/12)*10*(0.4²+0.2²) = 0.200
+           Iyy = (1/12)*10*(0.6²+0.2²) = 0.333
+           Izz = (1/12)*10*(0.6²+0.4²) = 0.433 -->
+      <inertia ixx="0.200" ixy="0.0" ixz="0.0"
+               iyy="0.333" iyz="0.0"
+               izz="0.433"/>
+    </inertial>
+  </link>
+
+  <!-- Left Wheel -->
+  <link name="left_wheel">
+    <visual>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>  <!-- 10cm radius, 5cm width -->
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>
+      </geometry>
+      <surface>
+        <friction>
+          <ode>
+            <mu>1.0</mu>   <!-- High friction for traction -->
+            <mu2>1.0</mu2>
+          </ode>
+        </friction>
+      </surface>
+    </collision>
+
+    <inertial>
+      <mass value="0.5"/>  <!-- 500g wheel -->
+      <!-- Solid cylinder inertia (radius=0.1, length=0.05):
+           Ixx = Iyy = (1/12)*m*(3*r² + h²) = (1/12)*0.5*(3*0.1² + 0.05²) = 0.00146
+           Izz = (1/2)*m*r² = (1/2)*0.5*0.1² = 0.0025 -->
+      <inertia ixx="0.00146" ixy="0.0" ixz="0.0"
+               iyy="0.00146" iyz="0.0"
+               izz="0.0025"/>
+    </inertial>
+  </link>
+
+  <!-- Right Wheel (symmetric to left) -->
+  <link name="right_wheel">
+    <visual>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0.1 0.1 0.1 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>
+      </geometry>
+      <surface>
+        <friction>
+          <ode>
+            <mu>1.0</mu>
+            <mu2>1.0</mu2>
+          </ode>
+        </friction>
+      </surface>
+    </collision>
+
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.00146" ixy="0.0" ixz="0.0"
+               iyy="0.00146" iyz="0.0"
+               izz="0.0025"/>
+    </inertial>
+  </link>
+
+  <!-- Caster Wheel (passive support wheel at front) -->
+  <link name="caster_wheel">
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>  <!-- 5cm radius sphere -->
+      </geometry>
+      <material name="white">
+        <color rgba="0.9 0.9 0.9 1.0"/>
+      </material>
+    </visual>
+
+    <collision>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+      <surface>
+        <friction>
+          <ode>
+            <mu>0.1</mu>  <!-- Low friction for free rotation -->
+            <mu2>0.1</mu2>
+          </ode>
+        </friction>
+      </surface>
+    </collision>
+
+    <inertial>
+      <mass value="0.2"/>  <!-- 200g caster -->
+      <!-- Solid sphere inertia: I = (2/5)*m*r² = (2/5)*0.2*0.05² = 0.0002 -->
+      <inertia ixx="0.0002" ixy="0.0" ixz="0.0"
+               iyy="0.0002" iyz="0.0"
+               izz="0.0002"/>
+    </inertial>
+  </link>
+
+  <!-- Joint: Base to Left Wheel (continuous revolute) -->
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel"/>
+    <origin xyz="0.0 0.225 -0.1" rpy="-1.5708 0 0"/>  <!-- Rotate 90° to align with Y-axis -->
+    <axis xyz="0 0 1"/>  <!-- Rotation axis in wheel's local frame (Z after rpy rotation) -->
+    <dynamics damping="0.1" friction="0.1"/>
+  </joint>
+
+  <!-- Joint: Base to Right Wheel -->
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel"/>
+    <origin xyz="0.0 -0.225 -0.1" rpy="-1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+    <dynamics damping="0.1" friction="0.1"/>
+  </joint>
+
+  <!-- Joint: Base to Caster Wheel (fixed - ball joint simulation) -->
+  <joint name="caster_wheel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="caster_wheel"/>
+    <origin xyz="0.25 0.0 -0.15" rpy="0 0 0"/>  <!-- Front center, below chassis -->
+  </joint>
+
+  <!-- Gazebo Plugin: Differential Drive Controller -->
+  <gazebo>
+    <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
+      <!-- Wheel joints -->
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+
+      <!-- Wheel separation and diameter -->
+      <wheel_separation>0.45</wheel_separation>  <!-- 45cm between wheels -->
+      <wheel_diameter>0.2</wheel_diameter>        <!-- 20cm diameter (radius 10cm) -->
+
+      <!-- Limits -->
+      <max_wheel_torque>20.0</max_wheel_torque>
+      <max_wheel_acceleration>1.0</max_wheel_acceleration>
+
+      <!-- ROS 2 Topics -->
+      <command_topic>cmd_vel</command_topic>
+      <odometry_topic>odom</odometry_topic>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+
+      <!-- Publishing -->
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>false</publish_wheel_tf>
+
+      <update_rate>50.0</update_rate>
+    </plugin>
+  </gazebo>
+
+  <!-- Gazebo materials -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Gray</material>
+  </gazebo>
+  <gazebo reference="left_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="caster_wheel">
+    <material>Gazebo/White</material>
+    <mu1>0.1</mu1>
+    <mu2>0.1</mu2>
+  </gazebo>
+
+</robot>

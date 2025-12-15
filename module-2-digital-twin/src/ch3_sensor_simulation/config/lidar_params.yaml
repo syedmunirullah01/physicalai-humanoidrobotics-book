@@ -1,0 +1,28 @@
+# LiDAR Sensor Configuration
+# Based on SICK TiM561 2D LiDAR specifications
+
+lidar_sensor:
+  ros__parameters:
+    # Range configuration
+    range_min: 0.05          # Minimum detectable distance (m)
+    range_max: 10.0          # Maximum detectable distance (m)
+    range_resolution: 0.001  # Distance resolution (m)
+
+    # Angular configuration
+    angle_min: -2.35619      # -135° in radians
+    angle_max: 2.35619       # +135° in radians (270° total FOV)
+    angle_increment: 0.004363  # 0.25° in radians
+    samples: 1081            # Number of samples (270° / 0.25°)
+
+    # Timing
+    update_rate: 15.0        # Scan frequency (Hz)
+    time_increment: 0.0      # Time between measurements (s) - 0 for instantaneous
+
+    # Noise model (Gaussian)
+    noise_type: "gaussian"
+    noise_mean: 0.0
+    noise_stddev: 0.01       # 1cm standard deviation
+
+    # Frame names
+    frame_id: "lidar_link"
+    topic_name: "/scan"

@@ -1,0 +1,1124 @@
+---
+sidebar_position: 4
+slug: /module3/chapter3-nav2
+title: Chapter 3 - Isaac ROS Navigation 2
+description: Complete guide to implementing Isaac ROS Navigation 2 for humanoid robot navigation with footstep planning
+---
+
+# Chapter 3: Isaac ROS Navigation 2
+
+This chapter covers the implementation of Isaac ROS Navigation 2 (Nav2) for humanoid robots, including global and local planning, footstep planning for bipedal locomotion, and recovery behaviors.
+
+## Introduction to Navigation 2
+
+Navigation 2 (Nav2) is ROS 2's state-of-the-art navigation framework, designed for autonomous mobile robots. For humanoid robots, Nav2 includes specialized capabilities for bipedal locomotion and complex terrain navigation.
+
+### Key Components
+- **Global Planner**: Path planning from start to goal
+- **Local Planner**: Local obstacle avoidance and trajectory execution
+- **Footstep Planner**: Specialized planning for bipedal robots
+- **Recovery Behaviors**: Robust navigation in challenging scenarios
+- **Safety Systems**: Collision avoidance and emergency responses
+
+## Nav2 Architecture for Humanoid Robots
+
+### System Architecture
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Localization  │───▶│   Global Planner │───▶│   Footstep      │
+│   (VSLAM)       │    │   (Path Planning)│    │   Planner       │
+│                 │    │                  │    │                 │
+│  - Pose Estimation│  │  - A*, Dijkstra  │  │  - Step Sequences│
+│  - Map Building │    │  - Costmaps     │    │  - Terrain Adapt │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Local Planner │───▶│ Recovery Behaviors│───▶│  Controller     │
+│   (Local Planning│    │   (Robustness)  │    │   (Execution)   │
+│   & Obstacle    │    │                  │    │                 │
+│   Avoidance)    │    │  - Spin, Backup  │    │  - Joint Control│
+└─────────────────┘    │  - Wait, Clear   │    │  - Balance       │
+                       └──────────────────┘    └─────────────────┘
+```
+
+## Installation and Setup
+
+### Prerequisites
+- ROS 2 Humble Hawksbill
+- Isaac ROS packages installed
+- VSLAM system operational
+- Robot with proper URDF model
+
+### Installation Steps
+```bash
+# Install Nav2 packages
+sudo apt update
+sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup
+sudo apt install ros-humble-isaac-ros-nav2
+
+# Verify installation
+ros2 launch nav2_bringup navigation_launch.py --show-args
+```
+
+## Configuration and Parameters
+
+### Main Nav2 Parameters
+```yaml
+# nav2_params.yaml
+amcl:
+  ros__parameters:
+    use_sim_time: True
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+    base_frame_id: "base_link"
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    do_beamskip: false
+    global_frame_id: "map"
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 100.0
+    laser_min_range: -1.0
+    laser_model_type: "likelihood_field"
+    max_beams: 60
+    max_particles: 2000
+    min_particles: 500
+    odom_frame_id: "odom"
+    pf_err: 0.05
+    pf_z: 0.99
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    resample_interval: 1
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    save_pose_rate: 0.5
+    sigma_hit: 0.2
+    tf_broadcast: true
+    transform_tolerance: 1.0
+    update_min_a: 0.2
+    update_min_d: 0.25
+    z_hit: 0.5
+    z_max: 0.05
+    z_rand: 0.5
+    z_short: 0.05
+    scan_topic: scan
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: True
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /vslam/odometry  # Using VSLAM odometry
+    bt_loop_duration: 10
+    default_server_timeout: 20
+    enable_groot_monitoring: True
+    groot_zmq_publisher_port: 1666
+    groot_zmq_server_port: 1667
+    # Behavior Tree XML file
+    bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
+    plugin_lib_names:
+    - nav2_compute_path_to_pose_action_bt_node
+    - nav2_compute_path_through_poses_action_bt_node
+    - nav2_follow_path_action_bt_node
+    - nav2_spin_action_bt_node
+    - nav2_wait_action_bt_node
+    - nav2_back_up_action_bt_node
+    - nav2_clear_costmap_service_bt_node
+    - nav2_is_stuck_condition_bt_node
+    - nav2_goal_reached_condition_bt_node
+    - nav2_goal_updated_condition_bt_node
+    - nav2_initial_pose_received_condition_bt_node
+    - nav2_rate_controller_bt_node
+    - nav2_distance_controller_bt_node
+
+controller_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 20.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugin: "goal_checker"
+    controller_plugins: ["FollowPath"]
+
+    # Progress checker parameters
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+
+    # Goal checker parameters
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.25
+      stateful: True
+
+    # Controller parameters
+    FollowPath:
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController:
+        plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+        desired_linear_vel: 0.5
+        max_linear_accel: 2.5
+        max_linear_decel: 2.5
+        desired_angular_vel: 1.0
+        max_angular_accel: 3.2
+        min_angular_vel: 0.05
+        max_robot_pose_age: 1.0
+        use_velocity_scaled_lookahead_dist: false
+        lookahead_dist: 0.6
+        min_lookahead_dist: 0.3
+        max_lookahead_dist: 0.9
+        use_interpolation: true
+        use_global_plan_overrides: true
+        allow_reversing: false
+        rotate_to_heading_angular_vel: 1.8
+        max_angular_accel_for_rotation: 3.2
+        goal_dist_tol: 0.25
+        xy_goal_tolerance: 0.1
+        trans_stopped_velocity: 0.1
+        short_circuit_trajectory: true
+        use_cost_regulated_linear_velocity_scaling: true
+        cost_scaling_dist: 0.6
+        cost_scaling_gain: 1.0
+        inflation_cost_scaling_factor: 3.0
+        replan_frequency: 0.1
+        use_dijkstra: true
+        use_grid_path: false
+        allow_unknown: true
+        lethal_cost: 253
+        neutral_cost: 65
+        publish_frequency: 10.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      update_frequency: 5.0
+      publish_frequency: 2.0
+      global_frame: odom
+      robot_base_frame: base_link
+      use_sim_time: True
+      rolling_window: true
+      width: 3
+      height: 3
+      resolution: 0.05
+      robot_radius: 0.22
+      plugins: ["voxel_layer", "inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: False
+        origin_z: 0.0
+        z_resolution: 0.2
+        z_voxels: 10
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      always_send_full_costmap: True
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 0.5
+      global_frame: map
+      robot_base_frame: base_link
+      use_sim_time: True
+      robot_radius: 0.22
+      resolution: 0.05
+      track_unknown_space: true
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan
+        scan:
+          topic: /scan
+          max_obstacle_height: 2.0
+          clearing: True
+          marking: True
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.0
+      static_layer:
+        plugin: "nav2_costmap_2d::StaticLayer"
+        map_subscribe_transient_local: True
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      always_send_full_costmap: True
+
+global_planner:
+  ros__parameters:
+    use_sim_time: True
+    planner_frequency: 1.0
+    expected_planner_frequency: 20.0
+    allow_unknown: true
+    tolerance: 0.5
+    use_astar: false
+    smooth_path: true
+    # Footstep planning specific parameters
+    enable_footstep_planning: true
+    step_size: 0.3
+    step_height: 0.1
+    step_width: 0.2
+    max_step_up: 0.15
+    max_step_down: 0.15
+    max_step_forward: 0.3
+    max_step_backward: 0.15
+    max_step_left: 0.15
+    max_step_right: 0.15
+    # Planner plugins
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+
+recoveries_server:
+  ros__parameters:
+    use_sim_time: True
+    recovery_plugins: ["spin", "backup", "wait"]
+    spin:
+      plugin: "nav2_recoveries::Spin"
+    backup:
+      plugin: "nav2_recoveries::BackUp"
+    wait:
+      plugin: "nav2_recoveries::Wait"
+    global_frame: odom
+    robot_base_frame: base_link
+    transform_timeout: 0.1
+    use_sim_time: True
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 1.0
+    min_rotational_vel: 0.4
+    rotational_acc_lim: 3.2
+
+waypoint_follower:
+  ros__parameters:
+    loop_rate: 20
+    stop_on_failure: false
+    waypoint_task_executor_plugin: "wait_at_waypoint"
+    wait_at_waypoint:
+      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+      enabled: true
+      waypoint_pause_duration: 200
+```
+
+## Global Path Planning
+
+### Path Planning for Humanoid Robots
+Humanoid robots require specialized path planning that considers:
+- Bipedal locomotion constraints
+- Step sequence planning
+- Terrain traversability
+- Balance maintenance
+
+```python
+# Example: Global path planning with footstep consideration
+import rclpy
+from rclpy.node import Node
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
+from visualization_msgs.msg import MarkerArray
+import numpy as np
+
+class HumanoidGlobalPlanner(Node):
+    def __init__(self):
+        super().__init__('humanoid_global_planner')
+
+        # Publisher for planned path
+        self.path_pub = self.create_publisher(Path, '/plan', 10)
+
+        # Publisher for footstep visualization
+        self.footstep_pub = self.create_publisher(MarkerArray, '/footstep_path', 10)
+
+        # Service for path planning
+        self.plan_service = self.create_service(
+            'nav2_msgs/srv/ComputePathToPose',
+            self.compute_path_to_pose
+        )
+
+    def compute_path_to_pose(self, request, response):
+        """Compute path from start to goal considering humanoid constraints"""
+        start = request.start
+        goal = request.goal
+
+        # Plan initial path using standard algorithm
+        path = self.plan_standard_path(start, goal)
+
+        # Apply humanoid-specific constraints
+        humanoid_path = self.apply_humanoid_constraints(path)
+
+        # Generate footstep plan
+        footstep_path = self.generate_footstep_plan(humanoid_path)
+
+        # Publish path and footsteps
+        self.publish_path(humanoid_path)
+        self.publish_footsteps(footstep_path)
+
+        response.path = humanoid_path
+        return response
+
+    def apply_humanoid_constraints(self, path):
+        """Apply constraints specific to humanoid locomotion"""
+        constrained_path = Path()
+        constrained_path.header = path.header
+
+        # Apply step size constraints
+        step_size = 0.3  # meters
+
+        for i in range(len(path.poses) - 1):
+            current_pose = path.poses[i]
+            next_pose = path.poses[i + 1]
+
+            # Calculate distance between poses
+            dist = self.calculate_distance(current_pose.pose, next_pose.pose)
+
+            # If distance is too large, interpolate intermediate poses
+            if dist > step_size:
+                num_intermediate = int(dist / step_size)
+                for j in range(1, num_intermediate + 1):
+                    intermediate_pose = self.interpolate_pose(
+                        current_pose.pose, next_pose.pose, j / num_intermediate
+                    )
+                    constrained_path.poses.append(
+                        PoseStamped(pose=intermediate_pose)
+                    )
+            else:
+                constrained_path.poses.append(current_pose)
+
+        return constrained_path
+
+    def generate_footstep_plan(self, path):
+        """Generate footstep plan for bipedal locomotion"""
+        footsteps = []
+
+        # For each path segment, generate footstep sequence
+        for i in range(len(path.poses) - 1):
+            left_foot, right_foot = self.generate_step_pair(
+                path.poses[i].pose, path.poses[i + 1].pose
+            )
+            footsteps.extend([left_foot, right_foot])
+
+        return footsteps
+
+    def calculate_distance(self, pose1, pose2):
+        """Calculate distance between two poses"""
+        dx = pose2.position.x - pose1.position.x
+        dy = pose2.position.y - pose1.position.y
+        return np.sqrt(dx*dx + dy*dy)
+
+    def interpolate_pose(self, start_pose, end_pose, t):
+        """Interpolate between two poses"""
+        result = Pose()
+
+        # Linear interpolation for position
+        result.position.x = start_pose.position.x + t * (end_pose.position.x - start_pose.position.x)
+        result.position.y = start_pose.position.y + t * (end_pose.position.y - start_pose.position.y)
+        result.position.z = start_pose.position.z + t * (end_pose.position.z - start_pose.position.z)
+
+        # Slerp for orientation (simplified)
+        # In practice, use proper quaternion interpolation
+        result.orientation = end_pose.orientation  # Simplified
+
+        return result
+```
+
+## Footstep Planning for Bipedal Locomotion
+
+### Footstep Planning Architecture
+Footstep planning is crucial for humanoid navigation:
+
+```python
+# Example: Footstep planning implementation
+import math
+from enum import Enum
+
+class Foot(Enum):
+    LEFT = 1
+    RIGHT = 2
+
+class FootstepPlanner:
+    def __init__(self):
+        self.step_size = 0.3  # meters
+        self.step_height = 0.1  # meters
+        self.step_width = 0.2  # meters
+        self.max_step_up = 0.15  # meters
+        self.max_step_down = 0.15  # meters
+
+    def plan_footsteps(self, path, robot_pose):
+        """Plan footsteps for a given path"""
+        footsteps = []
+
+        # Start with current robot pose
+        current_left_foot = self.calculate_initial_foot_pose(robot_pose, Foot.LEFT)
+        current_right_foot = self.calculate_initial_foot_pose(robot_pose, Foot.RIGHT)
+
+        # Alternate feet for each step
+        use_left_foot = True
+
+        for i in range(len(path.poses) - 1):
+            target_pose = path.poses[i + 1].pose
+
+            if use_left_foot:
+                # Plan left foot step
+                next_left_foot = self.calculate_next_foot_pose(
+                    current_left_foot, target_pose, robot_pose
+                )
+                footsteps.append((Foot.LEFT, next_left_foot))
+                current_left_foot = next_left_foot
+            else:
+                # Plan right foot step
+                next_right_foot = self.calculate_next_foot_pose(
+                    current_right_foot, target_pose, robot_pose
+                )
+                footsteps.append((Foot.RIGHT, next_right_foot))
+                current_right_foot = next_right_foot
+
+            use_left_foot = not use_left_foot
+
+        return footsteps
+
+    def calculate_initial_foot_pose(self, robot_pose, foot):
+        """Calculate initial foot pose based on robot pose"""
+        foot_pose = Pose()
+
+        # Position foot relative to robot
+        if foot == Foot.LEFT:
+            foot_pose.position.x = robot_pose.position.x
+            foot_pose.position.y = robot_pose.position.y + 0.1  # 10cm apart
+        else:  # RIGHT
+            foot_pose.position.x = robot_pose.position.x
+            foot_pose.position.y = robot_pose.position.y - 0.1  # 10cm apart
+
+        foot_pose.position.z = robot_pose.position.z  # Same height
+        foot_pose.orientation = robot_pose.orientation
+
+        return foot_pose
+
+    def calculate_next_foot_pose(self, current_foot, target_pose, robot_pose):
+        """Calculate next foot pose based on current and target"""
+        next_foot = Pose()
+
+        # Calculate direction vector from current foot to target
+        dx = target_pose.position.x - current_foot.position.x
+        dy = target_pose.position.y - current_foot.position.y
+        distance = math.sqrt(dx*dx + dy*dy)
+
+        # Normalize and scale to step size
+        if distance > 0:
+            scale = min(self.step_size, distance)
+            next_foot.position.x = current_foot.position.x + (dx/distance) * scale
+            next_foot.position.y = current_foot.position.y + (dy/distance) * scale
+        else:
+            next_foot.position = current_foot.position
+
+        # Maintain same height (adjust for terrain if needed)
+        next_foot.position.z = current_foot.position.z
+
+        # Copy orientation
+        next_foot.orientation = current_foot.orientation
+
+        return next_foot
+```
+
+## Local Planning and Obstacle Avoidance
+
+### Local Planner for Humanoid Robots
+```python
+# Example: Local planner with balance consideration
+class HumanoidLocalPlanner:
+    def __init__(self):
+        self.controller_frequency = 20.0  # Hz
+        self.max_linear_velocity = 0.5  # m/s
+        self.max_angular_velocity = 0.5  # rad/s
+        self.balance_margin = 0.1  # meters
+
+    def compute_velocity_commands(self, robot_pose, robot_velocity, global_plan):
+        """Compute velocity commands with balance consideration"""
+        # Get local goal from global plan
+        local_goal = self.get_local_goal(robot_pose, global_plan)
+
+        # Calculate desired velocity
+        desired_vel = self.calculate_desired_velocity(robot_pose, local_goal)
+
+        # Apply balance constraints
+        balanced_vel = self.apply_balance_constraints(
+            desired_vel, robot_pose, robot_velocity
+        )
+
+        # Apply obstacle avoidance
+        final_vel = self.apply_obstacle_avoidance(
+            balanced_vel, robot_pose, robot_velocity
+        )
+
+        return final_vel
+
+    def apply_balance_constraints(self, desired_vel, robot_pose, robot_velocity):
+        """Apply balance constraints to velocity commands"""
+        # Check if proposed velocity maintains balance
+        if self.would_lose_balance(robot_pose, desired_vel):
+            # Reduce velocity to maintain balance
+            reduction_factor = self.calculate_balance_safety_factor(
+                robot_pose, desired_vel
+            )
+            desired_vel.linear.x *= reduction_factor
+            desired_vel.angular.z *= reduction_factor
+
+        return desired_vel
+
+    def would_lose_balance(self, robot_pose, velocity):
+        """Check if velocity command would cause balance loss"""
+        # Simplified balance check
+        # In practice, use Zero Moment Point (ZMP) or other balance criteria
+        return abs(velocity.linear.x) > self.max_linear_velocity * 0.8
+```
+
+## Recovery Behaviors
+
+### Robust Navigation with Recovery
+```python
+# Example: Recovery behaviors for humanoid robots
+class RecoveryBehaviors:
+    def __init__(self):
+        self.recovery_plugins = {
+            'spin': self.spin_recovery,
+            'backup': self.backup_recovery,
+            'wait': self.wait_recovery,
+            'clear_costmap': self.clear_costmap_recovery
+        }
+
+    def spin_recovery(self, robot_pose, recovery_data):
+        """Spin recovery behavior"""
+        # Rotate robot to clear local minima
+        cmd_vel = Twist()
+        cmd_vel.angular.z = 0.5  # rad/s
+        return cmd_vel, 5.0  # command + duration
+
+    def backup_recovery(self, robot_pose, recovery_data):
+        """Backup recovery behavior"""
+        # Move robot backward to clear obstacles
+        cmd_vel = Twist()
+        cmd_vel.linear.x = -0.2  # m/s
+        return cmd_vel, 2.0  # command + duration
+
+    def wait_recovery(self, robot_pose, recovery_data):
+        """Wait recovery behavior"""
+        # Stop robot and wait for dynamic obstacles
+        cmd_vel = Twist()
+        return cmd_vel, 5.0  # command + duration
+
+    def clear_costmap_recovery(self, robot_pose, recovery_data):
+        """Clear costmap recovery behavior"""
+        # Clear local and global costmaps
+        # This would typically call costmap services
+        cmd_vel = Twist()
+        return cmd_vel, 1.0  # command + duration
+```
+
+## Launch Files for Humanoid Navigation
+
+### Complete Navigation Launch
+```python
+# nav2_humanoid_launch.py
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+import os
+
+def generate_launch_description():
+    # Launch configuration
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    params_file = LaunchConfiguration('params_file')
+    autostart = LaunchConfiguration('autostart')
+    use_composition = LaunchConfiguration('use_composition')
+    use_respawn = LaunchConfiguration('use_respawn')
+    enable_vslam_integration = LaunchConfiguration('enable_vslam_integration')
+
+    # Declare launch arguments
+    declare_use_sim_time_cmd = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true'
+    )
+
+    declare_params_file_cmd = DeclareLaunchArgument(
+        'params_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('isaac_ros_nav2'),
+            'config', 'nav2_params.yaml'
+        ]),
+        description='Full path to the ROS2 parameters file'
+    )
+
+    declare_autostart_cmd = DeclareLaunchArgument(
+        'autostart',
+        default_value='true',
+        description='Automatically startup the nav2 stack'
+    )
+
+    declare_use_composition_cmd = DeclareLaunchArgument(
+        'use_composition',
+        default_value='False',
+        description='Whether to use composed bringup'
+    )
+
+    declare_use_respawn_cmd = DeclareLaunchArgument(
+        'use_respawn',
+        default_value='False',
+        description='Whether to respawn if a node crashes'
+    )
+
+    declare_enable_vslam_integration_cmd = DeclareLaunchArgument(
+        'enable_vslam_integration',
+        default_value='true',
+        description='Enable integration with Isaac ROS VSLAM'
+    )
+
+    # Remappings for VSLAM integration
+    remappings = [('/tf', 'tf'),
+                  ('/tf_static', 'tf_static'),
+                  ('/cmd_vel', 'cmd_vel'),
+                  ('/odom', '/vslam/odometry'),  # Use VSLAM odometry
+                  ('/initialpose', 'initialpose'),
+                  ('/goal_pose', 'goal_pose'),
+                  ('/map', 'map'),
+                  ('/scan', 'scan')]
+
+    # Navigation server (composed)
+    nav2_container = Node(
+        condition=IfCondition(use_composition),
+        name='nav2_container',
+        package='rclcpp_components',
+        executable='component_container_isolated',
+        parameters=[{'autostart': autostart}],
+        remappings=remappings,
+        output='screen'
+    )
+
+    # Individual Nav2 nodes
+    amcl_node = Node(
+        package='nav2_amcl',
+        executable='amcl',
+        name='amcl',
+        parameters=[{'use_sim_time': use_sim_time}],
+        remappings=remappings,
+        output='screen',
+        respawn=use_respawn,
+        respawn_delay=2.0
+    )
+
+    planner_server_node = Node(
+        package='nav2_planner',
+        executable='planner_server',
+        name='planner_server',
+        parameters=[{'use_sim_time': use_sim_time}],
+        remappings=remappings,
+        output='screen',
+        respawn=use_respawn,
+        respawn_delay=2.0
+    )
+
+    controller_server_node = Node(
+        package='nav2_controller',
+        executable='controller_server',
+        name='controller_server',
+        parameters=[{'use_sim_time': use_sim_time}],
+        remappings=remappings,
+        output='screen',
+        respawn=use_respawn,
+        respawn_delay=2.0
+    )
+
+    behavior_server_node = Node(
+        package='nav2_behaviors',
+        executable='behavior_server',
+        name='behavior_server',
+        parameters=[{'use_sim_time': use_sim_time}],
+        remappings=remappings,
+        output='screen',
+        respawn=use_respawn,
+        respawn_delay=2.0
+    )
+
+    bt_navigator_node = Node(
+        package='nav2_bt_navigator',
+        executable='bt_navigator',
+        name='bt_navigator',
+        parameters=[{'use_sim_time': use_sim_time}],
+        remappings=remappings,
+        output='screen',
+        respawn=use_respawn,
+        respawn_delay=2.0
+    )
+
+    waypoint_follower_node = Node(
+        package='nav2_waypoint_follower',
+        executable='waypoint_follower',
+        name='waypoint_follower',
+        parameters=[{'use_sim_time': use_sim_time}],
+        remappings=remappings,
+        output='screen',
+        respawn=use_respawn,
+        respawn_delay=2.0
+    )
+
+    # Isaac ROS specific nodes
+    footstep_planner_node = Node(
+        package='isaac_ros_footstep_planner',
+        executable='footstep_planner_node',
+        name='footstep_planner',
+        parameters=[{'use_sim_time': use_sim_time}],
+        remappings=[
+            ('/input_path', '/plan'),
+            ('/output_footsteps', '/footstep_path'),
+        ],
+        output='screen'
+    )
+
+    # Lifecycle Manager
+    lifecycle_manager_node = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager',
+        output='screen',
+        parameters=[{'use_sim_time': use_sim_time},
+                   {'autostart': autostart},
+                   {'node_names': ['controller_server',
+                                  'planner_server',
+                                  'behavior_server',
+                                  'bt_navigator',
+                                  'waypoint_follower']}]
+    )
+
+    return LaunchDescription([
+        # Launch Arguments
+        declare_use_sim_time_cmd,
+        declare_params_file_cmd,
+        declare_autostart_cmd,
+        declare_use_composition_cmd,
+        declare_use_respawn_cmd,
+        declare_enable_vslam_integration_cmd,
+
+        # Core Nav2 nodes
+        nav2_container,
+        amcl_node,
+        planner_server_node,
+        controller_server_node,
+        behavior_server_node,
+        bt_navigator_node,
+        waypoint_follower_node,
+        lifecycle_manager_node,
+
+        # Isaac ROS specific nodes
+        footstep_planner_node,
+    ])
+```
+
+## Safety Systems and Emergency Procedures
+
+### Safety-First Navigation
+```python
+# Example: Safety manager for humanoid navigation
+class SafetyManager:
+    def __init__(self):
+        self.emergency_stop_distance = 0.3  # meters
+        self.max_linear_velocity = 0.5  # m/s
+        self.max_angular_velocity = 0.5  # rad/s
+        self.balance_threshold = 0.1  # meters
+
+    def check_safety(self, robot_pose, laser_scan, cmd_vel):
+        """Check if navigation command is safe"""
+        safety_status = {
+            'safe_to_proceed': True,
+            'emergency_stop': False,
+            'velocity_scale': 1.0,
+            'reason': ''
+        }
+
+        # Check for imminent collision
+        min_range = min(laser_scan.ranges) if laser_scan.ranges else float('inf')
+
+        if min_range < self.emergency_stop_distance:
+            safety_status['safe_to_proceed'] = False
+            safety_status['emergency_stop'] = True
+            safety_status['reason'] = 'Imminent collision detected'
+            return safety_status
+
+        # Check velocity limits
+        if abs(cmd_vel.linear.x) > self.max_linear_velocity:
+            safety_status['velocity_scale'] = self.max_linear_velocity / abs(cmd_vel.linear.x)
+
+        if abs(cmd_vel.angular.z) > self.max_angular_velocity:
+            angular_scale = self.max_angular_velocity / abs(cmd_vel.angular.z)
+            safety_status['velocity_scale'] = min(
+                safety_status['velocity_scale'],
+                angular_scale
+            )
+
+        # Check balance constraints
+        if self.would_compromise_balance(robot_pose, cmd_vel):
+            safety_status['safe_to_proceed'] = False
+            safety_status['reason'] = 'Command would compromise balance'
+
+        return safety_status
+
+    def would_compromise_balance(self, robot_pose, cmd_vel):
+        """Check if command would compromise robot balance"""
+        # Simplified balance check
+        # In practice, use ZMP or other balance criteria
+        return abs(cmd_vel.linear.x) > self.max_linear_velocity * 0.8
+```
+
+## Performance Optimization
+
+### Jetson-Optimized Configuration
+```yaml
+# nav2_params_jetson.yaml - Optimized for Jetson Orin
+amcl:
+  ros__parameters:
+    use_sim_time: False
+    alpha1: 0.2
+    alpha2: 0.2
+    alpha3: 0.2
+    alpha4: 0.2
+    alpha5: 0.2
+    base_frame_id: "base_link"
+    beam_skip_distance: 0.5
+    beam_skip_error_threshold: 0.9
+    beam_skip_threshold: 0.3
+    do_beamskip: false
+    global_frame_id: "map"
+    lambda_short: 0.1
+    laser_likelihood_max_dist: 2.0
+    laser_max_range: 100.0
+    laser_min_range: -1.0
+    laser_model_type: "likelihood_field"
+    max_beams: 30  # Reduced for Jetson performance
+    max_particles: 1000  # Reduced for Jetson performance
+    min_particles: 300  # Reduced for Jetson performance
+    odom_frame_id: "odom"
+    pf_err: 0.05
+    pf_z: 0.99
+    recovery_alpha_fast: 0.0
+    recovery_alpha_slow: 0.0
+    resample_interval: 1
+    robot_model_type: "nav2_amcl::DifferentialMotionModel"
+    save_pose_rate: 0.5
+    sigma_hit: 0.2
+    tf_broadcast: true
+    transform_tolerance: 1.0
+    update_min_a: 0.2
+    update_min_d: 0.25
+    z_hit: 0.5
+    z_max: 0.05
+    z_rand: 0.5
+    z_short: 0.05
+    scan_topic: scan
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: False
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /vslam/odometry
+    bt_loop_duration: 20  # Increased for Jetson performance
+    default_server_timeout: 20
+    enable_groot_monitoring: False  # Disabled for Jetson performance
+    groot_zmq_publisher_port: 1666
+    groot_zmq_server_port: 1667
+    bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
+    plugin_lib_names:
+    - nav2_compute_path_to_pose_action_bt_node
+    - nav2_compute_path_through_poses_action_bt_node
+    - nav2_follow_path_action_bt_node
+    - nav2_spin_action_bt_node
+    - nav2_wait_action_bt_node
+    - nav2_back_up_action_bt_node
+    - nav2_clear_costmap_service_bt_node
+    - nav2_is_stuck_condition_bt_node
+    - nav2_goal_reached_condition_bt_node
+    - nav2_goal_updated_condition_bt_node
+    - nav2_initial_pose_received_condition_bt_node
+    - nav2_rate_controller_bt_node
+    - nav2_distance_controller_bt_node
+
+controller_server:
+  ros__parameters:
+    use_sim_time: False
+    controller_frequency: 10.0  # Reduced for Jetson performance
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugin: "goal_checker"
+    controller_plugins: ["FollowPath"]
+
+    # Progress checker parameters
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+
+    # Goal checker parameters
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.25
+      stateful: True
+
+    # Controller parameters
+    FollowPath:
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController:
+        plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+        desired_linear_vel: 0.3  # Reduced for Jetson safety
+        max_linear_accel: 1.0  # Reduced for Jetson performance
+        max_linear_decel: 1.0  # Reduced for Jetson performance
+        desired_angular_vel: 0.6  # Reduced for Jetson performance
+        max_angular_accel: 1.5  # Reduced for Jetson performance
+        min_angular_vel: 0.05
+        max_robot_pose_age: 1.0
+        use_velocity_scaled_lookahead_dist: false
+        lookahead_dist: 0.4  # Reduced for Jetson performance
+        min_lookahead_dist: 0.2
+        max_lookahead_dist: 0.6
+        use_interpolation: true
+        use_global_plan_overrides: true
+        allow_reversing: false
+        rotate_to_heading_angular_vel: 1.0
+        max_angular_accel_for_rotation: 1.5
+        goal_dist_tol: 0.25
+        xy_goal_tolerance: 0.1
+        trans_stopped_velocity: 0.1
+        short_circuit_trajectory: true
+        use_cost_regulated_linear_velocity_scaling: true
+        cost_scaling_dist: 0.6
+        cost_scaling_gain: 1.0
+        inflation_cost_scaling_factor: 2.0  # Reduced for Jetson performance
+        replan_frequency: 0.1
+        use_dijkstra: true
+        use_grid_path: false
+        allow_unknown: true
+        lethal_cost: 253
+        neutral_cost: 65
+        publish_frequency: 5.0  # Reduced for Jetson performance
+```
+
+## Debugging and Troubleshooting
+
+### Common Navigation Issues
+
+#### 1. Local Minima Problems
+- **Symptoms**: Robot gets stuck in corners or narrow passages
+- **Solutions**: Improve recovery behaviors, adjust costmap inflation
+
+#### 2. Footstep Planning Failures
+- **Symptoms**: Robot unable to generate valid footsteps
+- **Solutions**: Adjust step size parameters, verify URDF model
+
+#### 3. Collision Avoidance Issues
+- **Symptoms**: Robot collides with obstacles or freezes
+- **Solutions**: Tune costmap parameters, verify sensor data
+
+#### 4. Balance Problems
+- **Symptoms**: Robot falls during navigation
+- **Solutions**: Reduce velocities, improve footstep planning
+
+### Debugging Tools
+```bash
+# Monitor navigation topics
+ros2 topic echo /plan
+ros2 topic echo /cmd_vel
+ros2 topic hz /vslam/odometry
+
+# Check navigation status
+ros2 service call /navigate_to_pose nav2_msgs/action/NavigateToPose
+
+# Monitor costmaps
+ros2 run rviz2 rviz2 -d /opt/ros/humble/share/nav2_bringup/rviz/nav2_default_view.rviz
+
+# Check recovery behaviors
+ros2 lifecycle set lifecycle_manager RECONFIGURE
+```
+
+## Exercises
+
+### Exercise 1: Basic Navigation Setup
+1. Set up Nav2 with default parameters
+2. Integrate with VSLAM system
+3. Test basic navigation in simulation
+4. Verify path planning and execution
+
+### Exercise 2: Footstep Planning
+1. Configure footstep planner for humanoid robot
+2. Test navigation with step sequence visualization
+3. Adjust step parameters for robot capabilities
+4. Validate bipedal locomotion patterns
+
+### Exercise 3: Recovery Behaviors
+1. Test different recovery behaviors
+2. Create scenarios that trigger recovery
+3. Tune recovery parameters for humanoid robots
+4. Validate robust navigation performance
+
+## Best Practices
+
+### 1. Safety First
+- Always implement emergency stop capabilities
+- Validate all navigation commands for safety
+- Monitor robot balance during execution
+- Use appropriate velocity limits
+
+### 2. Performance Optimization
+- Tune parameters for target hardware
+- Optimize for real-time performance
+- Balance accuracy vs. computation time
+- Monitor resource utilization
+
+### 3. Testing and Validation
+- Test in simulation before hardware
+- Validate in controlled environments
+- Monitor navigation success rates
+- Profile system performance
+
+## Summary
+
+Isaac ROS Navigation 2 provides comprehensive navigation capabilities for humanoid robots, including specialized footstep planning and recovery behaviors. By properly configuring the system and optimizing for your hardware, you can achieve robust autonomous navigation for bipedal robots.
+
+In the next chapter, we'll explore system integration and advanced topics that tie together all components of the Isaac ROS humanoid system.

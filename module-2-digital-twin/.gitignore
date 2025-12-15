@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ROS 2
+install/
+build/
+log/
+*.log
+
+# Unity (for ch2_unity_rendering/)
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+*.stackdump
+*.unitypackage
+*.apk
+*.aab
+
+# Unity specific files
+*.csproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Visual Studio cache directory
+.vs/
+
+# Rider (JetBrains)
+.idea/
+
+# Gazebo / Simulation
+*.world~
+*.sdf~
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+*.code-workspace
+
+# Test outputs
+.pytest_cache/
+coverage/
+htmlcov/
+.coverage
+*.cover
+
+# Docker
+.dockerignore
+
+# Environment variables
+.env
+.env.local
+*.env

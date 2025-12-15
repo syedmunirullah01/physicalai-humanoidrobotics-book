@@ -1,0 +1,56 @@
+# Placeholder warehouse scene for Isaac Sim
+
+This file represents a warehouse scene for Isaac Sim. In a real implementation, this would be a USD (Universal Scene Description) file containing the 3D scene definition.
+
+For educational purposes in Module 3, this serves as the base environment where learners will:
+- Create photorealistic simulation environments
+- Configure virtual sensors
+- Generate synthetic datasets
+- Test VSLAM algorithms
+- Validate navigation in known environments
+
+## Scene Description
+
+The warehouse scene includes:
+- Concrete floors with realistic textures
+- Metal shelving units with various objects
+- Industrial lighting (LED panels)
+- Loading dock area with forklifts
+- Safety barriers and markings
+- Standard warehouse dimensions (50m x 30m x 8m)
+
+## Usage in Module 3
+
+This scene is referenced in:
+- Chapter 1: Isaac Sim simulation exercises
+- Chapter 2: VSLAM testing with known ground truth
+- Chapter 3: Navigation validation in structured environment
+
+## Isaac Sim Integration
+
+To load this scene in Isaac Sim:
+1. Open Isaac Sim
+2. File → Open → Select this USD file
+3. Configure sensors as needed for exercises
+4. Run simulation
+
+## Technical Specifications
+
+- Format: USD (Universal Scene Description)
+- Units: Meters
+- Lighting: Physically-based rendering
+- Textures: 4K resolution for realism
+- Physics: Enabled for dynamic objects
+
+## Educational Objectives
+
+Using this scene, learners will:
+- Understand USD scene composition
+- Configure RGB, depth, and stereo cameras
+- Generate synthetic datasets with ground truth
+- Validate perception algorithms
+- Test navigation in realistic environments
+
+## Note
+
+This is a placeholder file. The actual USD scene would contain the complete 3D definition and would be created using Isaac Sim's scene creation tools or downloaded from the Isaac Sim assets library.

@@ -1,0 +1,42 @@
+# IMU Sensor Configuration
+# Based on MPU-6050 6-axis IMU specifications
+
+imu_sensor:
+  ros__parameters:
+    # Update rate
+    update_rate: 100.0       # Hz (typical for IMUs: 50-200 Hz)
+
+    # Angular velocity (gyroscope) configuration
+    gyro_range: 8.7266       # ±500°/s in rad/s
+    gyro_noise_mean: 0.0
+    gyro_noise_stddev: 0.0035  # ~0.2°/s noise (MPU-6050 spec)
+
+    # Linear acceleration (accelerometer) configuration
+    accel_range: 19.6        # ±2g in m/s² (1g = 9.8 m/s²)
+    accel_noise_mean: 0.0
+    accel_noise_stddev: 0.017  # ~0.17% of g (MPU-6050 spec)
+
+    # Orientation configuration
+    initial_orientation_as_reference: false  # Use world frame as reference
+
+    # Bias drift (simulates sensor drift over time)
+    gyro_bias_drift: 0.0001  # rad/s² (very slow drift)
+    accel_bias_drift: 0.001  # m/s³
+
+    # Frame names
+    frame_id: "imu_link"
+    topic_name: "/imu"
+
+    # Covariance matrices (diagonal elements only for simplicity)
+    # Order: [x, y, z] for orientation, angular_velocity, linear_acceleration
+    orientation_covariance: [0.01, 0.0, 0.0,
+                              0.0, 0.01, 0.0,
+                              0.0, 0.0, 0.01]
+
+    angular_velocity_covariance: [0.00001225, 0.0, 0.0,  # 0.0035² = 0.00001225
+                                   0.0, 0.00001225, 0.0,
+                                   0.0, 0.0, 0.00001225]
+
+    linear_acceleration_covariance: [0.000289, 0.0, 0.0,  # 0.017² = 0.000289
+                                      0.0, 0.000289, 0.0,
+                                      0.0, 0.0, 0.000289]

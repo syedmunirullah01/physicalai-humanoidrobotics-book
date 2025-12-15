@@ -1,0 +1,176 @@
+# Module 3 Isaac - Git Ignore File
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Python type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ROS 2 artifacts
+install/
+build/
+log/
+*.bag
+*.db3
+*.bag.orig.active
+*.db3-shm
+*.db3-wal
+
+# ROS generated files
+msg_gen/
+srv_gen/
+msg/*Action.msg
+msg/*ActionFeedback.msg
+msg/*ActionGoal.msg
+msg/*ActionResult.msg
+msg/*Feedback.msg
+msg/*Goal.msg
+msg/*Result.msg
+msg/_*.py
+build_isolated/
+devel_isolated/
+
+# URDF/Xacro generated files
+*.urdf.xacro
+*.urdf (if generated)
+
+# Isaac Sim / Omniverse
+*.usd~
+*.usd.bak
+.isaac/
+.omni/
+isaac_sim_cache/
+kit_cache/
+
+# Synthetic datasets (large files)
+shared/datasets/sample-warehouse/rgb/*.png
+shared/datasets/sample-warehouse/depth/*.png
+shared/datasets/sample-warehouse/depth/*.exr
+shared/datasets/sample-warehouse/segmentation/*.png
+*.json.gz
+
+# Recorded trajectories (ROS bags - large files)
+shared/datasets/recorded-trajectories/*.bag
+shared/datasets/recorded-trajectories/*.db3
+shared/datasets/recorded-trajectories/*.mcap
+
+# VSLAM maps (large binary files)
+*.vslam_map
+*.map
+*.pgm
+*.yaml (if auto-generated from SLAM)
+
+# Downloaded models and assets
+shared/assets/*.usd (except warehouse-scene.usd if committed)
+shared/assets/models/
+shared/assets/textures/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.vs/
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Performance profiling
+*.prof
+*.lprof
+*.pstats
+
+# CUDA compilation artifacts
+*.cubin
+*.fatbin
+*.ptx
+
+# Documentation build artifacts
+docs/_build/
+docs/_static/
+docs/_templates/
+
+# Validation outputs
+validation_results/
+test_outputs/
+benchmark_results/
+
+# User-specific exercise solutions
+exercises/solutions/my_*
+exercises/solutions/user_*
+
+# Checkpoints
+checkpoints/
+*.ckpt
+
+# Compressed archives (except intentional releases)
+*.tar.gz
+*.zip
+*.7z
+*.rar
+
+# Keep important files
+!shared/datasets/sample-warehouse/labels.json
+!shared/assets/warehouse-scene.usd
+!requirements.txt
+!package.xml
+!README.md

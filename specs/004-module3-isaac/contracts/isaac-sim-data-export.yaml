@@ -1,0 +1,412 @@
+# Isaac Sim Data Export Contract
+# ROS 2 topics, services, and parameters for synthetic dataset generation (Chapter 1)
+
+version: "1.0.0"
+namespace: /isaac_sim
+framework: ROS 2 Humble/Jazzy
+
+# ============================================================================
+# TOPICS - Sensor Data Streams
+# ============================================================================
+
+topics:
+  # RGB Camera Output
+  /isaac_sim/camera/rgb/image_raw:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    encoding: rgb8
+    description: Raw RGB images from virtual camera
+    frame_rate: 30  # Hz
+    resolution: [1920, 1080]
+
+  /isaac_sim/camera/rgb/camera_info:
+    message_type: sensor_msgs/CameraInfo
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: Camera calibration and metadata
+
+  # Depth Camera Output
+  /isaac_sim/camera/depth/image_raw:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    encoding: 32FC1  # 32-bit float, depth in meters
+    description: Raw depth images from virtual depth sensor
+    frame_rate: 30  # Hz
+    range: [0.1, 10.0]  # meters
+
+  /isaac_sim/camera/depth/camera_info:
+    message_type: sensor_msgs/CameraInfo
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+
+  # Stereo Camera Pair (for VSLAM)
+  /isaac_sim/stereo/left/image_raw:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    encoding: rgb8
+    frame_rate: 60  # Hz for VSLAM
+
+  /isaac_sim/stereo/right/image_raw:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    encoding: rgb8
+    frame_rate: 60  # Hz
+
+  /isaac_sim/stereo/camera_info:
+    message_type: sensor_msgs/CameraInfo
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: Stereo pair calibration (baseline, rectification)
+
+  # Semantic Segmentation
+  /isaac_sim/camera/semantic_segmentation:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    encoding: mono16  # 16-bit class IDs
+    description: Per-pixel semantic class labels
+    frame_rate: 30  # Hz
+
+  # Instance Segmentation
+  /isaac_sim/camera/instance_segmentation:
+    message_type: sensor_msgs/Image
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    encoding: mono16  # 16-bit instance IDs
+    description: Per-pixel instance labels
+
+  # Bounding Boxes (2D)
+  /isaac_sim/annotations/bounding_boxes_2d:
+    message_type: vision_msgs/Detection2DArray
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: 2D bounding boxes with class labels and confidence
+
+  # Bounding Boxes (3D)
+  /isaac_sim/annotations/bounding_boxes_3d:
+    message_type: vision_msgs/Detection3DArray
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: 3D bounding boxes in world coordinates
+
+  # Ground Truth Poses
+  /isaac_sim/ground_truth/camera_pose:
+    message_type: geometry_msgs/PoseStamped
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: Ground truth camera pose in world frame
+    frame_id: "world"
+
+  /isaac_sim/ground_truth/object_poses:
+    message_type: geometry_msgs/PoseArray
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 10
+    description: Ground truth poses of all objects in scene
+
+  # Point Cloud (LiDAR)
+  /isaac_sim/lidar/points:
+    message_type: sensor_msgs/PointCloud2
+    qos:
+      reliability: BEST_EFFORT
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 5
+    description: 3D point cloud from virtual LiDAR
+    frame_rate: 10  # Hz
+    fields: [x, y, z, intensity]
+
+  # Dataset Generation Status
+  /isaac_sim/dataset/generation_status:
+    message_type: std_msgs/String
+    qos:
+      reliability: RELIABLE
+      durability: VOLATILE
+      history: KEEP_LAST
+      depth: 1
+    description: JSON status of dataset generation progress
+    format: |
+      {
+        "dataset_id": "uuid",
+        "num_generated": 123,
+        "num_total": 1000,
+        "progress": 0.123,
+        "state": "generating|paused|completed|error"
+      }
+
+# ============================================================================
+# SERVICES - Control and Configuration
+# ============================================================================
+
+services:
+  # Start Dataset Generation
+  /isaac_sim/dataset/start_generation:
+    service_type: std_srvs/Trigger
+    description: Start synthetic dataset generation with current config
+    request: {}
+    response:
+      success: bool
+      message: string  # "Dataset generation started" or error message
+
+  # Stop Dataset Generation
+  /isaac_sim/dataset/stop_generation:
+    service_type: std_srvs/Trigger
+    description: Stop ongoing dataset generation
+    request: {}
+    response:
+      success: bool
+      message: string
+
+  # Configure Randomization
+  /isaac_sim/randomization/configure:
+    service_type: isaac_sim_msgs/ConfigureRandomization
+    description: Update domain randomization parameters
+    request:
+      lighting_variance: float32      # ±% (0-100)
+      texture_randomization: bool
+      object_pose_jitter: float32     # ±meters
+      camera_noise_sigma: float32     # 0-0.1
+    response:
+      success: bool
+      message: string
+
+  # Load Scene
+  /isaac_sim/scene/load:
+    service_type: isaac_sim_msgs/LoadScene
+    description: Load a USD scene file
+    request:
+      scene_path: string              # Absolute path to .usd file
+      reset_simulation: bool
+    response:
+      success: bool
+      message: string
+      num_objects: int32
+
+  # Export Dataset
+  /isaac_sim/dataset/export:
+    service_type: isaac_sim_msgs/ExportDataset
+    description: Export generated dataset to disk
+    request:
+      dataset_id: string              # UUID of dataset
+      export_path: string             # Directory path
+      format: string                  # "coco|yolo|kitti|custom"
+      include_depth: bool
+      include_segmentation: bool
+      compress: bool                  # Create .tar.gz archive
+    response:
+      success: bool
+      message: string
+      export_path: string             # Full path to exported dataset
+      size_bytes: int64
+
+  # Get Scene Info
+  /isaac_sim/scene/get_info:
+    service_type: isaac_sim_msgs/GetSceneInfo
+    description: Retrieve information about loaded scene
+    request: {}
+    response:
+      scene_name: string
+      num_objects: int32
+      num_lights: int32
+      bounds_min: geometry_msgs/Point
+      bounds_max: geometry_msgs/Point
+      assets: string[]                # List of asset names
+
+# ============================================================================
+# PARAMETERS - Configuration
+# ============================================================================
+
+parameters:
+  /isaac_sim/simulation/physics_dt:
+    type: double
+    default: 0.01                     # 100 Hz physics
+    range: [0.001, 0.1]
+    description: Physics simulation timestep (seconds)
+
+  /isaac_sim/simulation/rendering_dt:
+    type: double
+    default: 0.0333                   # 30 FPS rendering
+    range: [0.001, 1.0]
+    description: Rendering timestep (seconds)
+
+  /isaac_sim/camera/width:
+    type: int
+    default: 1920
+    range: [320, 3840]
+    description: Camera image width (pixels)
+
+  /isaac_sim/camera/height:
+    type: int
+    default: 1080
+    range: [240, 2160]
+    description: Camera image height (pixels)
+
+  /isaac_sim/camera/fov:
+    type: double
+    default: 90.0                     # degrees
+    range: [30.0, 120.0]
+    description: Camera field of view (horizontal)
+
+  /isaac_sim/randomization/enabled:
+    type: bool
+    default: false
+    description: Enable domain randomization
+
+  /isaac_sim/randomization/tier:
+    type: string
+    default: "tier1"
+    allowed_values: ["tier1", "tier2", "tier3"]
+    description: |
+      Randomization tier:
+      - tier1: Lighting + textures
+      - tier2: tier1 + object poses
+      - tier3: tier2 + camera noise
+
+  /isaac_sim/dataset/auto_export:
+    type: bool
+    default: false
+    description: Automatically export dataset when generation completes
+
+  /isaac_sim/dataset/export_format:
+    type: string
+    default: "coco"
+    allowed_values: ["coco", "yolo", "kitti", "custom"]
+    description: Default export format for datasets
+
+# ============================================================================
+# CUSTOM MESSAGE DEFINITIONS (for reference)
+# ============================================================================
+
+custom_messages:
+  isaac_sim_msgs/ConfigureRandomization:
+    fields:
+      - {name: lighting_variance, type: float32}
+      - {name: texture_randomization, type: bool}
+      - {name: object_pose_jitter, type: float32}
+      - {name: camera_noise_sigma, type: float32}
+
+  isaac_sim_msgs/LoadScene:
+    fields:
+      - {name: scene_path, type: string}
+      - {name: reset_simulation, type: bool}
+
+  isaac_sim_msgs/ExportDataset:
+    fields:
+      - {name: dataset_id, type: string}
+      - {name: export_path, type: string}
+      - {name: format, type: string}
+      - {name: include_depth, type: bool}
+      - {name: include_segmentation, type: bool}
+      - {name: compress, type: bool}
+
+  isaac_sim_msgs/GetSceneInfo:
+    fields: []
+
+# ============================================================================
+# VALIDATION RULES
+# ============================================================================
+
+validation:
+  topic_synchronization:
+    - topics: ["/isaac_sim/camera/rgb/image_raw", "/isaac_sim/camera/rgb/camera_info"]
+      max_time_delta: 0.01            # seconds
+    - topics: ["/isaac_sim/stereo/left/image_raw", "/isaac_sim/stereo/right/image_raw"]
+      max_time_delta: 0.001           # Tight sync for stereo
+
+  message_frequency:
+    /isaac_sim/camera/rgb/image_raw:
+      min_hz: 25
+      max_hz: 65
+    /isaac_sim/stereo/left/image_raw:
+      min_hz: 55
+      max_hz: 65
+
+  data_integrity:
+    - field: sensor_msgs/Image.encoding
+      valid_values: ["rgb8", "bgr8", "mono8", "mono16", "32FC1"]
+    - field: sensor_msgs/CameraInfo.K
+      constraint: "K[0] > 0 && K[4] > 0"  # Valid focal lengths
+
+# ============================================================================
+# EXAMPLE USAGE (Python)
+# ============================================================================
+
+example_code: |
+  import rclpy
+  from rclpy.node import Node
+  from sensor_msgs.msg import Image
+  from std_srvs.srv import Trigger
+
+  class DatasetCollector(Node):
+      def __init__(self):
+          super().__init__('dataset_collector')
+
+          # Subscribe to RGB images
+          self.rgb_sub = self.create_subscription(
+              Image,
+              '/isaac_sim/camera/rgb/image_raw',
+              self.rgb_callback,
+              10
+          )
+
+          # Service client to start generation
+          self.start_client = self.create_client(
+              Trigger,
+              '/isaac_sim/dataset/start_generation'
+          )
+
+      def start_generation(self):
+          request = Trigger.Request()
+          future = self.start_client.call_async(request)
+          rclpy.spin_until_future_complete(self, future)
+
+          if future.result().success:
+              self.get_logger().info('Dataset generation started')
+          else:
+              self.get_logger().error(f'Failed: {future.result().message}')
+
+      def rgb_callback(self, msg):
+          # Process RGB image
+          self.get_logger().info(f'Received image: {msg.width}x{msg.height}')

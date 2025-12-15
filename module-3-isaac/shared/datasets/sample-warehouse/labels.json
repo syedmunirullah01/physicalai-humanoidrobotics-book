@@ -1,0 +1,96 @@
+{
+  "info": {
+    "description": "Sample Warehouse Dataset - Module 3 Isaac",
+    "version": "1.0",
+    "year": 2025,
+    "contributor": "Physical AI Team",
+    "date_created": "2025-12-14"
+  },
+  "licenses": [
+    {
+      "id": 1,
+      "url": "https://creativecommons.org/licenses/by/4.0/",
+      "name": "Attribution 4.0 International"
+    }
+  ],
+  "images": [
+    {
+      "id": 0,
+      "width": 1280,
+      "height": 720,
+      "file_name": "rgb/000000.png",
+      "depth_file": "depth/000000.png",
+      "segmentation_file": "segmentation/000000.png",
+      "coco_url": "",
+      "date_captured": "2025-12-14 10:00:00",
+      "flickr_url": "",
+      "license": 1,
+      "license_name": "Attribution 4.0 International"
+    },
+    {
+      "id": 1,
+      "width": 1280,
+      "height": 720,
+      "file_name": "rgb/000001.png",
+      "depth_file": "depth/000001.png",
+      "segmentation_file": "segmentation/000001.png",
+      "coco_url": "",
+      "date_captured": "2025-12-14 10:00:01",
+      "flickr_url": "",
+      "license": 1,
+      "license_name": "Attribution 4.0 International"
+    }
+  ],
+  "annotations": [
+    {
+      "id": 0,
+      "image_id": 0,
+      "category_id": 2,
+      "bbox": [345, 123, 89, 156],
+      "area": 13884,
+      "iscrowd": 0,
+      "segmentation": [[345, 123, 434, 123, 434, 279, 345, 279]]
+    },
+    {
+      "id": 1,
+      "image_id": 1,
+      "category_id": 1,
+      "bbox": [123, 234, 123, 123],
+      "area": 15129,
+      "iscrowd": 0,
+      "segmentation": [[123, 234, 246, 234, 246, 357, 123, 357]]
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "pallet",
+      "supercategory": "object"
+    },
+    {
+      "id": 2,
+      "name": "cardboard_box",
+      "supercategory": "object"
+    },
+    {
+      "id": 3,
+      "name": "barrel",
+      "supercategory": "object"
+    },
+    {
+      "id": 4,
+      "name": "forklift",
+      "supercategory": "vehicle"
+    },
+    {
+      "id": 5,
+      "name": "person",
+      "supercategory": "human"
+    },
+    {
+      "id": 6,
+      "name": "shelf",
+      "supercategory": "furniture"
+    }
+  ]
+}

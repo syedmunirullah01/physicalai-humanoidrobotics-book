@@ -1,0 +1,300 @@
+# Sensor Configuration for Isaac Sim - Chapter 1
+# Defines standard sensor configurations for synthetic data generation
+
+# Standard stereo camera configuration for VSLAM
+stereo_camera:
+  name: "StereoCamera"
+  left:
+    prim_path: "/World/StereoCamera_Left"
+    resolution: [848, 480]
+    fov: 90.0  # degrees
+    position: [0.0, 0.060, 0.0]  # 60mm right of center
+    orientation: [0.0, 0.0, 0.0, 1.0]  # Quaternion (w,x,y,z)
+    frequency: 30  # Hz
+    clipping_range: [0.1, 100.0]  # meters
+    horizontal_aperture: 15.0  # mm
+    vertical_aperture: 8.47    # mm (for 848x480 at 90° FOV)
+    focal_length: 11.25        # mm
+  right:
+    prim_path: "/World/StereoCamera_Right"
+    resolution: [848, 480]
+    fov: 90.0  # degrees
+    position: [0.0, -0.060, 0.0]  # 60mm left of center (120mm baseline)
+    orientation: [0.0, 0.0, 0.0, 1.0]  # Quaternion (w,x,y,z)
+    frequency: 30  # Hz
+    clipping_range: [0.1, 100.0]  # meters
+    horizontal_aperture: 15.0  # mm
+    vertical_aperture: 8.47    # mm (for 848x480 at 90° FOV)
+    focal_length: 11.25        # mm
+  baseline: 0.120  # 120mm baseline
+  rectification: true
+
+# RGB-D camera configuration
+rgbd_camera:
+  name: "RGBDCamera"
+  rgb:
+    prim_path: "/World/RGBCamera"
+    resolution: [1280, 720]
+    fov: 90.0  # degrees
+    position: [0.0, 0.0, 0.0]
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    frequency: 30
+    clipping_range: [0.1, 10.0]
+    horizontal_aperture: 20.955  # mm (for 1280x720 at 90° FOV)
+    vertical_aperture: 11.803    # mm
+    focal_length: 15.0           # mm
+  depth:
+    prim_path: "/World/DepthCamera"
+    resolution: [1280, 720]
+    fov: 90.0
+    position: [0.0, 0.0, 0.0]  # Same position as RGB for alignment
+    orientation: [0.0, 0.0, 0.0, 1.0]
+    frequency: 30
+    clipping_range: [0.1, 10.0]
+    horizontal_aperture: 20.955
+    vertical_aperture: 11.803
+    focal_length: 15.0
+  # Depth accuracy parameters
+  depth_noise:
+    enabled: true
+    sigma: 0.01  # meters
+    model: "gaussian"
+
+# LiDAR configuration
+lidar:
+  name: "VelodyneVLP16"
+  prim_path: "/World/LiDAR"
+  position: [0.0, 0.0, 1.0]  # 1m high
+  orientation: [0.0, 0.0, 0.0, 1.0]
+  channels: 16
+  range: 100.0  # meters
+  vertical_fov: 30.0  # degrees
+  horizontal_fov: 360.0  # degrees
+  rotation_frequency: 10.0  # Hz
+  points_per_second: 300000
+  frequency: 10  # scans per second
+  noise_model:
+    enabled: true
+    sigma: 0.01  # meters
+  # Sensor-specific parameters
+  vlp16:
+    distance_resolution: 0.002  # 2mm
+    return_type_enabled: true
+
+# Mono camera configuration (for visual odometry)
+mono_camera:
+  name: "MonoCamera"
+  prim_path: "/World/MonoCamera"
+  resolution: [848, 480]
+  fov: 90.0  # degrees
+  position: [0.0, 0.0, 0.0]
+  orientation: [0.0, 0.0, 0.0, 1.0]
+  frequency: 30  # Hz
+  clipping_range: [0.1, 50.0]  # meters
+  horizontal_aperture: 15.0   # mm
+  vertical_aperture: 8.47     # mm (for 848x480 at 90° FOV)
+  focal_length: 11.25         # mm
+  # Camera noise parameters
+  noise:
+    enabled: true
+    sigma: 0.02  # 2% noise level
+
+# Thermal camera configuration (for advanced perception)
+thermal_camera:
+  name: "ThermalCamera"
+  prim_path: "/World/ThermalCamera"
+  resolution: [640, 512]  # Common thermal resolution
+  fov: 45.0  # degrees (narrower FOV typical for thermal)
+  position: [0.0, 0.0, 0.5]  # Slightly higher
+  orientation: [0.0, 0.0, 0.0, 1.0]
+  frequency: 30  # Hz
+  clipping_range: [0.1, 50.0]  # meters
+  horizontal_aperture: 10.0   # mm (for 45° FOV)
+  vertical_aperture: 8.0      # mm
+  focal_length: 15.0          # mm
+  # Thermal-specific parameters
+  thermal:
+    temperature_range: [20, 100]  # Celsius
+    sensitivity: 0.05  # degrees Celsius
+
+# Multi-camera array for 360-degree perception
+camera_array:
+  cameras:
+    - name: "FrontCamera"
+      prim_path: "/World/CameraArray/Front"
+      position: [0.0, 0.0, 0.8]
+      orientation: [0.0, 0.0, 0.0, 1.0]  # Looking forward
+      resolution: [848, 480]
+      fov: 90.0
+    - name: "BackCamera"
+      prim_path: "/World/CameraArray/Back"
+      position: [0.0, 0.0, 0.8]
+      orientation: [0.0, 0.0, 1.0, 0.0]  # Looking backward
+      resolution: [848, 480]
+      fov: 90.0
+    - name: "LeftCamera"
+      prim_path: "/World/CameraArray/Left"
+      position: [0.0, 0.0, 0.8]
+      orientation: [0.0, 0.0, 0.707, 0.707]  # Looking left (90° rotation)
+      resolution: [848, 480]
+      fov: 90.0
+    - name: "RightCamera"
+      prim_path: "/World/CameraArray/Right"
+      position: [0.0, 0.0, 0.8]
+      orientation: [0.0, 0.0, -0.707, 0.707]  # Looking right (-90° rotation)
+      resolution: [848, 480]
+      fov: 90.0
+  frequency: 30  # All cameras synchronized
+
+# ROS 2 integration settings
+ros2:
+  enabled: true
+  domain_id: 0
+  # Camera topics
+  camera:
+    rgb_topic: "/camera/rgb/image_raw"
+    depth_topic: "/camera/depth/image_raw"
+    camera_info_topic: "/camera/rgb/camera_info"
+    stereo:
+      left_topic: "/camera/left/image_raw"
+      right_topic: "/camera/right/image_raw"
+      left_info_topic: "/camera/left/camera_info"
+      right_info_topic: "/camera/right/camera_info"
+    frame_id: "camera_link"
+    optical_frame_id: "camera_rgb_optical_frame"
+  # LiDAR topics
+  lidar:
+    pointcloud_topic: "/lidar/points"
+    frame_id: "lidar_link"
+  # TF frames
+  tf:
+    publish: true
+    base_frame: "base_link"
+    camera_frame: "camera_link"
+    lidar_frame: "lidar_link"
+
+# Data generation settings
+data_generation:
+  # Output directories
+  output_dirs:
+    rgb: "shared/datasets/current_session/rgb"
+    depth: "shared/datasets/current_session/depth"
+    segmentation: "shared/datasets/current_session/segmentation"
+    annotations: "shared/datasets/current_session/labels.json"
+
+  # Image format settings
+  image_format:
+    rgb:
+      format: "png"
+      compression: 95  # PNG compression level (1-9, 9 is most compressed)
+    depth:
+      format: "png16"  # 16-bit PNG for millimeter precision
+      scale_factor: 1000  # Convert meters to millimeters
+    segmentation:
+      format: "png8"  # 8-bit PNG for class IDs
+
+  # Annotation format
+  annotation:
+    format: "coco"  # Options: coco, yolo, kitti
+    include_3d_bboxes: true
+    include_segmentation: true
+    include_keypoints: false
+
+  # Performance settings
+  performance:
+    max_images_per_batch: 1000
+    batch_processing: true
+    parallel_capture: true
+    memory_limit_gb: 8.0
+
+# Quality assurance settings
+quality_assurance:
+  # Image quality checks
+  image_quality:
+    min_brightness: 30    # 0-255 scale
+    max_brightness: 220   # 0-255 scale
+    min_contrast: 0.1     # 0-1 scale
+    max_noise: 0.1        # 0-1 scale
+
+  # Sensor validation
+  sensor_validation:
+    check_intrinsics: true
+    check_extrinsics: true
+    check_synchronization: true
+    validate_calibration: true
+
+  # Data integrity
+  data_integrity:
+    verify_file_sizes: true
+    check_corruption: true
+    validate_annotations: true
+
+# Domain randomization settings
+domain_randomization:
+  # Tier 1: Basic (lighting, textures)
+  tier_1:
+    enabled: true
+    lighting:
+      intensity_variance: 0.4      # ±40%
+      color_temp_variance: 2000    # ±2000K
+      num_variants: 5
+    textures:
+      material_randomization: true
+      num_variants: 8
+
+  # Tier 2: Intermediate (Tier 1 + object positions)
+  tier_2:
+    enabled: true
+    object_jitter:
+      position: 0.1        # ±10cm
+      rotation: 15.0       # ±15°
+    removal_probability: 0.1  # 10% chance to remove objects
+    camera_noise_sigma: 0.02  # 2% noise
+
+  # Tier 3: Advanced (all above + physics)
+  tier_3:
+    enabled: false  # Enable for advanced sim-to-real transfer
+    physics_randomization:
+      friction_variance: 0.3
+      restitution_variance: 0.2
+    atmospheric_effects: false
+
+# Safety and performance limits
+safety_limits:
+  # Maximum data generation rate to prevent system overload
+  max_generation_rate:
+    images_per_hour: 2000  # Conservative limit
+    images_per_minute: 35  # Safety check
+
+  # Resource limits
+  resource_limits:
+    gpu_memory_percent: 85.0  # Don't exceed 85% GPU memory
+    cpu_percent: 80.0         # Don't exceed 80% CPU
+    disk_space_gb: 50.0       # Minimum free disk space required
+
+# Scene-specific configurations
+warehouse_scene:
+  # Default sensor placement for warehouse environments
+  default_position: [2.0, 0.0, 1.5]  # 2m forward, 0m lateral, 1.5m high
+  default_orientation: [0.0, 0.0, 0.0, 1.0]  # Looking forward
+  optimal_viewpoints:
+    - position: [5.0, 0.0, 2.0]     # Central overview
+      orientation: [0.0, 0.0, 0.0, 1.0]
+    - position: [0.0, -3.0, 1.5]    # Side view
+      orientation: [0.0, 0.0, 0.707, 0.707]
+    - position: [8.0, 5.0, 2.5]     # Corner view
+      orientation: [0.0, 0.0, 0.383, 0.924]  # 45° angle
+
+# Validation parameters for Chapter 1 exercises
+validation:
+  # Parameters for SC-001 (1000+ images/hour)
+  dataset_generation:
+    target_rate: 1000  # images per hour
+    batch_size: 100    # images per batch for performance monitoring
+    validation_interval: 100  # validate every 100 images
+
+  # Parameters for SC-007 (>85% perception accuracy)
+  perception_quality:
+    annotation_accuracy: 0.95  # Target annotation accuracy
+    object_detection_threshold: 0.5  # IoU threshold for detection
+    segmentation_accuracy: 0.90  # Pixel accuracy target
